@@ -4,6 +4,10 @@ CILITERM 是一个现代化的跨平台终端模拟器，基于 Electron 和 Vue
 
 CILITERM is a modern cross-platform terminal emulator built with Electron and Vue3, featuring system monitoring, file browsing, network traffic visualization, and a 3D globe animation.
 
+
+![alt text](dcos/image.png)
+
+<video controls src="dcos/ciliterm.mp4" title="Title"></video>
 ---
 
 ## 功能 Features
