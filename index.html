@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CILITERM</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="node_modules/xterm/css/xterm.css">
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div class="titlebar">
+        <div class="titlebar-drag">
+            <span class="icon">⚡</span>
+            <span class="app-title">CILITERM</span>
+            <span class="app-subtitle">CILLIAN</span>
+        </div>
+        <div class="window-controls">
+            <button class="minimize">─</button>
+            <button class="maximize">□</button>
+            <button class="close">×</button>
+        </div>
+    </div>
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="time-section">
+                <div class="section-title">Time Info</div>
+                <div class="time-info">
+                    <div class="time-display" id="current-time">--:--:--.---</div>
+                    <div class="date-display" id="current-date">----/--/--</div>
+                </div>
+            </div>
+            <div class="globe-section">
+                <div class="section-title" data-timezone="UTC+8">Earth View</div>
+                <div id="globe-container"></div>
+            </div>
+            <div class="network-section">
+                <div class="section-title">Network Info</div>
+                <div class="network-info">
+                    <div class="info-group">
+                        <div class="info-label">IP Address</div>
+                        <div class="info-value" id="ip-address">-</div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Ping</div>
+                        <div class="info-value" id="ping-value">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="process-section">
+                <div class="section-title">Process Info</div>
+                <div class="process-list" id="process-list">
+                </div>
+            </div>
+        </div>
+        <div class="terminal-section">
+            <div id="terminal"></div>
+        </div>
+        <div class="side-panel">
+            <div class="wave-section">
+                <div class="section-title">Network Traffic</div>
+                <div class="network-stats">
+                    <div class="network-stat">
+                        <span class="network-label">In:</span>
+                        <span class="network-value" id="net-in">0 KB/s</span>
+                    </div>
+                    <div class="network-stat">
+                        <span class="network-label">Out:</span>
+                        <span class="network-value" id="net-out">0 KB/s</span>
+                    </div>
+                </div>
+                <canvas id="waveCanvas"></canvas>
+            </div>
+            <div class="system-section">
+                <div class="section-title">System Info</div>
+                <div class="system-info">
+                    <div class="info-group">
+                        <div class="info-label">CPU Model</div>
+                        <div class="info-value" id="cpu-model">-</div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">CPU Cores</div>
+                        <div class="info-value" id="cpu-cores">-</div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Total Memory</div>
+                        <div class="info-value" id="total-memory">-</div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Platform</div>
+                        <div class="info-value" id="platform">-</div>
+                    </div>
+                    <div class="info-group">
+                        <div class="info-label">Architecture</div>
+                        <div class="info-value" id="architecture">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="files-section">
+                <div class="section-title">File Explorer</div>
+                <div class="current-path" id="current-path">-</div>
+                <div class="file-list" id="file-list">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="system-metrics">
+            <div class="metric-item">
+                <span class="metric-label">CPU</span>
+                <span class="metric-value" id="cpu-usage">0%</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">MEM</span>
+                <span class="metric-value" id="mem-usage">0%</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">NET</span>
+                <span class="metric-value" id="net-usage">0 KB/s</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">UPTIME</span>
+                <span class="metric-value" id="uptime">0:00:00</span>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
