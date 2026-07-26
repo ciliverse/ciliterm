@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1620"/>
+      <stop offset="1" stop-color="#04070a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="228" fill="#04070a"/>
+  <rect x="48" y="48" width="928" height="928" rx="196" fill="url(#panel)"/>
+
+  <!-- Bezel: stacked strokes stand in for a blur so the icon renders identically
+       in every rasteriser electron-builder may hand it to. -->
+  <rect x="48" y="48" width="928" height="928" rx="196" fill="none" stroke="#35e6ff" stroke-opacity="0.10" stroke-width="34"/>
+  <rect x="48" y="48" width="928" height="928" rx="196" fill="none" stroke="#35e6ff" stroke-opacity="0.20" stroke-width="18"/>
+  <rect x="48" y="48" width="928" height="928" rx="196" fill="none" stroke="#35e6ff" stroke-opacity="0.85" stroke-width="7"/>
+
+  <!-- Corner ticks -->
+  <g stroke="#35e6ff" stroke-opacity="0.55" stroke-width="10" stroke-linecap="round">
+    <path d="M150 262 L150 190 L222 190"/>
+    <path d="M874 262 L874 190 L802 190"/>
+    <path d="M150 762 L150 834 L222 834"/>
+    <path d="M874 762 L874 834 L802 834"/>
+  </g>
+
+  <!-- Prompt glyph: glow pass then core pass -->
+  <g fill="none" stroke="#35e6ff" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke-opacity="0.16" stroke-width="104">
+      <path d="M330 372 L508 512 L330 652"/>
+      <path d="M576 660 L742 660"/>
+    </g>
+    <g stroke-opacity="0.34" stroke-width="76">
+      <path d="M330 372 L508 512 L330 652"/>
+      <path d="M576 660 L742 660"/>
+    </g>
+    <g stroke="#c8fbff" stroke-width="52">
+      <path d="M330 372 L508 512 L330 652"/>
+      <path d="M576 660 L742 660"/>
+    </g>
+  </g>
+</svg>

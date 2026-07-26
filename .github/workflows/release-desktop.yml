@@ -1,0 +1,108 @@
+name: Release Desktop
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Builds are intentionally unsigned; see desktop/README.md.
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+jobs:
+  check:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+
+  package:
+    name: ${{ matrix.label }}
+    needs: check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform's toolchain breaking should not deny the others a release.
+      fail-fast: false
+      matrix:
+        include:
+          - label: Linux x64
+            os: ubuntu-latest
+            slug: linux-x64
+            script: pack:linux
+            globs: |
+              desktop/release/*.AppImage
+              desktop/release/*.deb
+          - label: Windows x64
+            os: windows-latest
+            slug: win-x64
+            script: pack:win
+            globs: |
+              desktop/release/*.exe
+          - label: macOS arm64 + x64
+            os: macos-latest
+            slug: mac
+            script: pack:mac
+            globs: |
+              desktop/release/*.dmg
+              desktop/release/*.zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      # Only for the deb; electron-builder bundles its own AppImage tooling and
+      # does not need FUSE to *build* one (libfuse2 is a runtime concern, and is
+      # libfuse2t64 on 24.04 anyway).
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fakeroot
+
+      # Compiles node-pty on Linux, where it has no prebuild. Nothing is rebuilt
+      # for Electron afterwards - it is a Node-API addon; see desktop/README.md.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # build.mjs drives the shared/client builds itself so the shipped payload
+      # cannot inherit a stray VITE_SHOWCASE from the runner.
+      - name: Package
+        run: pnpm --filter @ciliterm/desktop ${{ matrix.script }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciliterm-desktop-${{ matrix.slug }}
+          path: ${{ matrix.globs }}
+          if-no-files-found: error
+
+      - name: Publish release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.globs }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

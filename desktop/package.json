@@ -1,0 +1,32 @@
+{
+  "name": "@ciliterm/desktop",
+  "version": "2.0.0",
+  "private": true,
+  "description": "ciliterm desktop shell (Electron)",
+  "license": "AGPL-3.0-only",
+  "main": "src/main.js",
+  "author": "ciliverse <cilliantech@gmail.com>",
+  "homepage": "https://github.com/ciliverse/ciliterm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ciliverse/ciliterm.git"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "electron .",
+    "dev": "node build.mjs && electron .",
+    "pack:dir": "node build.mjs && electron-builder --dir --publish never",
+    "pack:win": "node build.mjs && electron-builder --win --publish never",
+    "pack:mac": "node build.mjs && electron-builder --mac --publish never",
+    "pack:linux": "node build.mjs && electron-builder --linux --publish never"
+  },
+  "dependencies": {
+    "node-pty": "1.1.0",
+    "systeminformation": "5.23.5"
+  },
+  "devDependencies": {
+    "electron": "43.2.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.1"
+  }
+}

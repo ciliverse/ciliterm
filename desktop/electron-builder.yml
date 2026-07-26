@@ -1,0 +1,91 @@
+appId: website.cillian.ciliterm
+productName: CiliTerm
+copyright: Copyright © 2026 Cillian
+
+# Without this the binary is named after the npm package, which would ship as
+# "@cilitermdesktop" and break the StartupWMClass match below.
+executableName: ciliterm
+
+directories:
+  output: release
+  buildResources: assets
+
+files:
+  - src/**
+  - runtime/**
+  - assets/icon.png
+  - package.json
+
+# ELECTRON_RUN_AS_NODE bypasses Electron's asar filesystem patches, so the
+# sidecar could not require an archived server bundle, and node-pty's .node
+# binary has to be on disk regardless. What is left to pack is a bundled server,
+# the web assets and two npm packages, so unpacking costs nothing.
+asar: false
+
+# node-pty 1.1.0 is a Node-API addon: one binary already works under both
+# runtimes (Electron 43 reports ABI 148, Node 24 reports 137, and the same
+# pty.node loads in each). Rebuilding is not merely redundant — node-pty
+# resolves build/Release before prebuilds/<platform>-<arch>, so a rebuild would
+# leave a host-arch binary shadowing the correct prebuild in the other macOS
+# slice. systeminformation is pure JS. Nothing here needs compiling.
+npmRebuild: false
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: TerminalEmulator
+  synopsis: Sci-fi terminal with live system monitors
+  description: >-
+    A daily-driver sci-fi terminal: real shell over node-pty, tmux-backed
+    persistent sessions, SSH manager, live system monitors and an ENCOM-style
+    globe.
+  desktop:
+    entry:
+      Keywords: terminal;shell;tmux;ssh;console;
+      StartupWMClass: ciliterm
+  artifactName: CiliTerm-${version}-linux-${arch}.${ext}
+
+deb:
+  # Recommends, not depends: without tmux sessions fall back to an in-process
+  # pty, and without ssh the connection manager simply stays empty.
+  recommends:
+    - tmux
+    - openssh-client
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: CiliTerm-${version}-win-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  shortcutName: CiliTerm
+  artifactName: CiliTerm-${version}-win-${arch}-setup.${ext}
+
+portable:
+  artifactName: CiliTerm-${version}-win-${arch}-portable.${ext}
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  category: public.app-category.developer-tools
+  # Unsigned: users clear the quarantine flag once. See README.md.
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  artifactName: CiliTerm-${version}-mac-${arch}.${ext}
+
+dmg:
+  artifactName: CiliTerm-${version}-mac-${arch}.${ext}

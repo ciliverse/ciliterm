@@ -1,39 +1,45 @@
 {
   "name": "ciliterm",
-  "version": "1.0.0",
-  "description": "A modern terminal emulator",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "rebuild": "electron-rebuild"
-  },
-  "author": "",
+  "version": "2.0.0",
+  "private": true,
+  "description": "ciliterm - a sci-fi but practical web terminal (eDEX-UI style)",
   "license": "AGPL-3.0-only",
-  "dependencies": {
-    "clean-css": "5.3.3",
-    "electron": "36.4.0",
-    "electron-builder": "^26.0.12",
-    "electron-rebuild": "^3.2.9",
-    "mime-types": "^3.0.1",
-    "node-abi": "^4.9.0",
-    "node-gyp": "11.2.0",
-    "node-json-minify": "3.0.0",
-    "node-pty": "^1.0.0",
-    "systeminformation": "^5.27.1",
-    "three": "^0.177.0",
-    "three-globe": "^2.42.11",
-    "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0",
-    "xterm-addon-web-links": "^0.9.0"
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ciliterm/shared build && concurrently -n shared,server,client -c gray,cyan,magenta \"pnpm --filter @ciliterm/shared dev\" \"pnpm --filter @ciliterm/server dev\" \"pnpm --filter @ciliterm/client dev\"",
+    "build": "pnpm --filter @ciliterm/shared build && pnpm --filter @ciliterm/client build && pnpm --filter @ciliterm/server build",
+    "start": "pnpm --filter @ciliterm/server start",
+    "desktop": "pnpm --filter @ciliterm/desktop dev",
+    "desktop:pack": "pnpm --filter @ciliterm/desktop pack:dir",
+    "desktop:win": "pnpm --filter @ciliterm/desktop pack:win",
+    "desktop:mac": "pnpm --filter @ciliterm/desktop pack:mac",
+    "desktop:linux": "pnpm --filter @ciliterm/desktop pack:linux",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "format": "prettier --write ."
   },
   "devDependencies": {
-    "electron-builder": "^26.0.12"
+    "@eslint/js": "9.18.0",
+    "@typescript-eslint/eslint-plugin": "8.20.0",
+    "@typescript-eslint/parser": "8.20.0",
+    "concurrently": "9.1.2",
+    "eslint": "9.18.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-react-hooks": "5.1.0",
+    "globals": "^17.7.0",
+    "prettier": "3.4.2",
+    "typescript": "5.7.3",
+    "vitest": "^4.1.10"
   },
-  "build": {
-    "appId": "com.ciliterm.app",
-    "win": {
-      "target": "nsis"
-    }
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "node-pty",
+      "esbuild",
+      "electron",
+      "electron-winstaller"
+    ]
   }
 }
