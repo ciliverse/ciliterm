@@ -42,6 +42,10 @@ toggleable eye-candy. Web now, Tauri-wrappable later.
 
 - System `ssh` only (key / ssh-agent auth). Host book at
   `~/.config/ciliterm/hosts.json`. **Never store passwords.**
+- `buildSshArgv` returns argv and is spawned directly - never a command string
+  through a shell. The host book is user data, so this removes the quoting
+  problem rather than solving it, and it is the only form that works on
+  Windows, which has `ssh.exe` but no POSIX shell to quote for.
 
 ## Spawned shells
 
@@ -52,6 +56,10 @@ toggleable eye-candy. Web now, Tauri-wrappable later.
 - Opening a session must never throw out of the `/pty` handler. One pane failing
   to get a pty is an `{ t: 'error' }` on that socket, not a dead process taking
   every other session with it.
+- Nothing may assume a POSIX host. `SHELL` is ignored on Windows (Git Bash and
+  MSYS2 export a `/usr/bin/...` path that CreateProcess cannot run), `HOME` is
+  read via `os.homedir()` so `USERPROFILE` works, and a free-form command goes
+  through PowerShell there rather than `bash -lc`.
 
 ## Desktop shell
 
@@ -114,6 +122,13 @@ toggleable eye-candy. Web now, Tauri-wrappable later.
 - Tests import pure modules directly; keep unit-testable logic dependency-light
   (e.g. `server/src/net-util.ts`, `server/src/ssh-cmd.ts`) rather than tangled
   with `node-pty` / `systeminformation` / config side effects.
+- Anything that branches on `platform` takes it as an argument (`defaultShell`,
+  `resolveArgv`, `shellEnv`) so the Windows branches are covered from a Linux
+  CI, where they would otherwise never run.
+- `tests/manual-*.mjs` are not part of `pnpm test`; they need a real pty and a
+  built server. `manual-ssh-path.mjs` spawns an SSH session at 192.0.2.1
+  (unroutable) and asserts the key path survives as argv - the one part of the
+  SSH path no unit test reaches.
 
 ## Run
 

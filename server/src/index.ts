@@ -23,7 +23,8 @@ import {
 } from './config.js';
 import { timingSafeEqual } from 'node:crypto';
 import { SessionManager, type AttachedSession } from './sessions.js';
-import { HostStore, buildSshCommand } from './hosts.js';
+import { HostStore, buildSshArgv } from './hosts.js';
+import type { Argv } from './ssh-cmd.js';
 import { collectMetrics } from './sysinfo.js';
 import { listDir } from './fs.js';
 import { GeoService } from './geo.js';
@@ -153,6 +154,7 @@ ptyWss.on('connection', (ws: WebSocket) => {
       }
 
       let command: string | undefined;
+      let exec: Argv | undefined;
       if (msg.t === 'create') {
         if (msg.hostId) {
           const host = hosts.get(msg.hostId);
@@ -160,7 +162,7 @@ ptyWss.on('connection', (ws: WebSocket) => {
             send({ t: 'error', message: `unknown host: ${msg.hostId}` });
             return;
           }
-          command = buildSshCommand(host);
+          exec = buildSshArgv(host);
         } else {
           command = msg.command;
         }
@@ -169,6 +171,7 @@ ptyWss.on('connection', (ws: WebSocket) => {
         session = sessions.open({
           name: msg.t === 'attach' ? msg.session : msg.name,
           command,
+          exec,
           cwd: msg.t === 'create' ? msg.cwd : undefined,
           cols: msg.cols,
           rows: msg.rows,

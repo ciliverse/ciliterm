@@ -166,8 +166,10 @@ None of these is bundled; the app degrades instead of failing.
 
 - **tmux** — sessions survive quitting and reopening the app. Without it,
   sessions live inside the backend process, and quitting warns you before
-  ending them.
-- **ssh** — required by the SSH manager. Key and ssh-agent auth only.
+  ending them. There is no tmux on Windows, so sessions there always end with
+  the app.
+- **ssh** — required by the SSH manager. Key and ssh-agent auth only. Windows 10
+  1809 and later ship `ssh.exe`, which is enough.
 - **A working WebGL context** — only the globe needs one. Inside a VM, over RDP
   or on a blocklisted driver the panel shows "globe unavailable" and the rest of
   the app is untouched.

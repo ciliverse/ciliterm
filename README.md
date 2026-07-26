@@ -13,6 +13,15 @@ React + Vite + TypeScript web app backed by a Node + TypeScript server.
 It runs in a browser, and ships as a desktop app for Linux, macOS and Windows
 that wraps the exact same server and client.
 
+![ciliterm](docs/screenshot.png)
+
+## Download
+
+Installers for Linux, macOS and Windows are on the
+[releases page](https://github.com/ciliverse/ciliterm/releases/latest). They are
+unsigned, so first launch needs one extra step on macOS and Windows — see
+[`desktop/README.md`](desktop/README.md).
+
 ## Features
 
 - **Real terminal** over `node-pty` (xterm.js + WebGL renderer): tabs, up to
@@ -118,7 +127,8 @@ Environment variables (server):
 
 - `CILITERM_HOST` (default `127.0.0.1`)
 - `CILITERM_PORT` (default `8787`)
-- `CILITERM_SHELL` (default `$SHELL` or `bash`)
+- `CILITERM_SHELL` (default `$SHELL` or `bash`; on Windows, `powershell.exe` —
+  `$SHELL` is ignored there because Git Bash and MSYS2 set it to a Unix path)
 - `CILITERM_CONFIG_DIR` (default `~/.config/ciliterm`)
 - `CILITERM_CLIENT_DIST` — where to serve the web client from (default: the
   sibling `client/dist`; the desktop build points this into its own resources)

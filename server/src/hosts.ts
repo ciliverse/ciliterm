@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { SshHost, type SshHostInput } from '@ciliterm/shared';
 import { CONFIG_DIR, HOSTS_FILE } from './config.js';
 
-export { buildSshCommand } from './ssh-cmd.js';
+export { buildSshArgv } from './ssh-cmd.js';
 
 /** Persistent SSH host book stored at ~/.config/ciliterm/hosts.json (no passwords). */
 export class HostStore {

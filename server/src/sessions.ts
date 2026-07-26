@@ -2,10 +2,12 @@ import { execFile, execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { promisify } from 'node:util';
 import fs from 'node:fs';
+import os from 'node:os';
 import type { IPty } from 'node-pty';
 import type { SessionInfo, SessionKind } from '@ciliterm/shared';
 import { DEFAULT_SHELL, MANAGED_BUFFER_LIMIT } from './config.js';
 import { shellEnv } from './shell-env.js';
+import type { Argv } from './ssh-cmd.js';
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
@@ -17,7 +19,10 @@ function loadPty(): typeof import('node-pty') {
 
 export interface OpenOptions {
   name?: string;
+  /** Free-form command line; goes through a shell so the user's syntax works. */
   command?: string;
+  /** Already-resolved program and arguments, spawned with no shell involved. */
+  exec?: Argv;
   cwd?: string;
   cols?: number;
   rows?: number;
@@ -45,6 +50,38 @@ function detectTmux(): boolean {
 
 function randomName(): string {
   return `cili-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/**
+ * What to spawn for a session. `exec` wins because it is already argv and needs
+ * no interpretation; a free-form `command` needs a shell to parse it, and that
+ * shell is not `bash` on Windows.
+ */
+export function resolveArgv(
+  opts: Pick<OpenOptions, 'exec' | 'command'>,
+  platform: NodeJS.Platform = process.platform,
+  fallbackShell: string = DEFAULT_SHELL,
+): Argv {
+  if (opts.exec) return opts.exec;
+  if (opts.command) {
+    return platform === 'win32'
+      ? { file: 'powershell.exe', args: ['-NoLogo', '-Command', opts.command] }
+      : { file: 'bash', args: ['-lc', opts.command] };
+  }
+  return { file: fallbackShell, args: [] };
+}
+
+/**
+ * `HOME` is Unix-only; Windows uses `USERPROFILE`. `os.homedir()` reads whichever
+ * the platform actually sets, so panes open in the user's home instead of
+ * wherever the app happens to have been launched from.
+ */
+function defaultCwd(): string | undefined {
+  try {
+    return os.homedir();
+  } catch {
+    return undefined;
+  }
 }
 
 interface ManagedSession {
@@ -106,13 +143,15 @@ export class SessionManager {
     const name = opts.name?.trim() || randomName();
     const args = ['new-session', '-A', '-s', name];
     if (opts.cwd) args.push('-c', opts.cwd);
-    if (opts.command) args.push(opts.command);
+    // tmux accepts the command as argv, so an `exec` needs no requoting.
+    if (opts.exec) args.push(opts.exec.file, ...opts.exec.args);
+    else if (opts.command) args.push(opts.command);
 
     const proc = pty.spawn('tmux', args, {
       name: 'xterm-256color',
       cols: opts.cols ?? 80,
       rows: opts.rows ?? 24,
-      cwd: opts.cwd ?? process.env.HOME,
+      cwd: opts.cwd ?? defaultCwd(),
       env: shellEnv(),
     });
 
@@ -162,13 +201,12 @@ export class SessionManager {
 
     if (!session) {
       const pty = loadPty();
-      const shellFile = opts.command ? 'bash' : DEFAULT_SHELL;
-      const shellArgs = opts.command ? ['-lc', opts.command] : [];
-      const proc = pty.spawn(shellFile, shellArgs, {
+      const { file, args } = resolveArgv(opts);
+      const proc = pty.spawn(file, args, {
         name: 'xterm-256color',
         cols: opts.cols ?? 80,
         rows: opts.rows ?? 24,
-        cwd: opts.cwd ?? process.env.HOME,
+        cwd: opts.cwd ?? defaultCwd(),
         env: shellEnv(),
       });
 

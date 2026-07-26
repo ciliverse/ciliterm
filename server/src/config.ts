@@ -70,10 +70,23 @@ export const AUTH_DISABLED = SHOWCASE
   : process.env.CILITERM_NO_AUTH === '1' ||
     (LOOPBACK_HOSTS.has(HOST) && !process.env.CILITERM_TOKEN);
 
-export const DEFAULT_SHELL =
-  process.env.CILITERM_SHELL ??
-  process.env.SHELL ??
-  (os.platform() === 'win32' ? 'powershell.exe' : 'bash');
+/**
+ * `SHELL` is a POSIX convention, but Git Bash, MSYS2 and Cygwin export it on
+ * Windows too — pointing at a Unix path like `/usr/bin/bash` that CreateProcess
+ * cannot resolve. Launching ciliterm from one of those shells would otherwise
+ * leave every pane failing to spawn, so it is only consulted where it means
+ * something. `CILITERM_SHELL` stays the override on both platforms.
+ */
+export function defaultShell(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = os.platform(),
+): string {
+  if (env.CILITERM_SHELL) return env.CILITERM_SHELL;
+  if (platform === 'win32') return 'powershell.exe';
+  return env.SHELL ?? 'bash';
+}
+
+export const DEFAULT_SHELL = defaultShell();
 
 export const CONFIG_DIR =
   process.env.CILITERM_CONFIG_DIR ?? path.join(os.homedir(), '.config', 'ciliterm');
