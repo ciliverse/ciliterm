@@ -1,5 +1,5 @@
 import type { Metrics } from '@ciliterm/shared';
-import { Sparkline } from './Sparkline';
+import { LineBar, Sparkline } from './Sparkline';
 import { bytes, rate, uptime } from '../../utils/format';
 import { resolveTheme } from '../../theme/themes';
 import { useSettings } from '../../settings/settings';
@@ -39,9 +39,7 @@ export function CpuCard({ metrics, hist }: CardProps) {
         <span>{cpu.model || 'processor'}</span>
         <b>{cpu.load.toFixed(1)}%</b>
       </div>
-      <div className={`bar ${cpu.load > 85 ? 'warn' : ''}`}>
-        <span style={{ width: `${cpu.load}%` }} />
-      </div>
+      <LineBar value={cpu.load} warn={cpu.load > 85} />
       <Sparkline data={hist.cpu} color={colors.primary} />
     </div>
   );
@@ -63,9 +61,7 @@ export function MemoryCard({ metrics, hist }: CardProps) {
         </span>
         <b>{mem.usedPct.toFixed(1)}%</b>
       </div>
-      <div className={`bar ${mem.usedPct > 85 ? 'warn' : ''}`}>
-        <span style={{ width: `${mem.usedPct}%` }} />
-      </div>
+      <LineBar value={mem.usedPct} warn={mem.usedPct > 85} />
       <Sparkline data={hist.mem} color={colors.green} />
       {mem.swapUsedPct !== null && (
         <div className="metric-row" style={{ marginTop: 4 }}>
@@ -107,7 +103,7 @@ export function DiskCard({ metrics }: CardProps) {
   return (
     <div className="panel">
       <div className="panel-title">Disk</div>
-      <div className="list" style={{ maxHeight: 140 }}>
+      <div className="list">
         {metrics.disk.map((d) => (
           <div key={d.mount}>
             <div className="metric-row">
@@ -116,9 +112,7 @@ export function DiskCard({ metrics }: CardProps) {
               </span>
               <b>{d.usePct.toFixed(0)}%</b>
             </div>
-            <div className={`bar ${d.usePct > 90 ? 'warn' : ''}`}>
-              <span style={{ width: `${d.usePct}%` }} />
-            </div>
+            <LineBar value={d.usePct} warn={d.usePct > 90} />
           </div>
         ))}
       </div>

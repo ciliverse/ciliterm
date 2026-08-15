@@ -1,0 +1,7 @@
+Vendored from https://github.com/arscan/encom-globe (MIT)
+and the Three r122 port in https://github.com/jose-acevedoflores/encom-globe-react.
+
+LineGeometry.js and a few Three 0.171 API shims (BufferGeometry index,
+vertexColors, Sprite.scale.set) are the only local edits. Visual behavior
+is the original Encom hex globe: tiles, intro lines, pins, markers, smoke,
+satellites.

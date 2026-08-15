@@ -7,12 +7,14 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  MAX_COL_WIDTH,
   MIN_COL_WIDTH,
-  MODULE_LABELS,
+  isTerminal,
+  maxColWidth,
+  moduleLabel,
   type ColumnId,
   type ModuleId,
 } from '../layout/layout';
+import { ModuleFrame } from './ModuleFrame';
 
 interface Props {
   side: ColumnId;
@@ -23,11 +25,16 @@ interface Props {
   onMove: (id: ModuleId, toCol: ColumnId, index: number) => void;
   onHide: (id: ModuleId) => void;
   onWidthChange: (w: number) => void;
+  onHeightChange: (id: ModuleId, height: number) => void;
+  heights: Partial<Record<ModuleId, number>>;
+  peerWidth: number;
+  centerOccupied: boolean;
   onDragStateChange: (dragging: boolean) => void;
 }
 
-function clamp(w: number) {
-  return Math.max(MIN_COL_WIDTH, Math.min(MAX_COL_WIDTH, w));
+function clampWidth(w: number, peerWidth: number, centerOccupied: boolean) {
+  const max = maxColWidth(peerWidth, window.innerWidth, centerOccupied);
+  return Math.max(MIN_COL_WIDTH, Math.min(max, w));
 }
 
 export function LayoutSidebar({
@@ -39,6 +46,10 @@ export function LayoutSidebar({
   onMove,
   onHide,
   onWidthChange,
+  onHeightChange,
+  heights,
+  peerWidth,
+  centerOccupied,
   onDragStateChange,
 }: Props) {
   const [w, setW] = useState(width);
@@ -83,7 +94,13 @@ export function LayoutSidebar({
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const move = (ev: PointerEvent) => {
       const delta = ev.clientX - startX;
-      setW(clamp(side === 'left' ? startW + delta : startW - delta));
+      setW(
+        clampWidth(
+          side === 'left' ? startW + delta : startW - delta,
+          peerWidth,
+          centerOccupied,
+        ),
+      );
     };
     const up = () => {
       resizing.current = false;
@@ -116,7 +133,7 @@ export function LayoutSidebar({
           <div
             className="lay-grip"
             draggable
-            title={`drag ${MODULE_LABELS[id]}`}
+            title={`drag ${moduleLabel(id)}`}
             onDragStart={(e) => {
               e.dataTransfer.setData('text/plain', id);
               e.dataTransfer.effectAllowed = 'move';
@@ -129,10 +146,18 @@ export function LayoutSidebar({
           >
             ⠿
           </div>
-          <button className="lay-hide" title={`hide ${MODULE_LABELS[id]}`} onClick={() => onHide(id)}>
+          <button className="lay-hide" title={`hide ${moduleLabel(id)}`} onClick={() => onHide(id)}>
             ✕
           </button>
-          {renderModule(id)}
+          <ModuleFrame
+            id={id}
+            height={heights[id] ?? (isTerminal(id) ? 260 : undefined)}
+            onHeightChange={onHeightChange}
+            onHide={() => onHide(id)}
+            onDragStateChange={onDragStateChange}
+          >
+            {renderModule(id)}
+          </ModuleFrame>
         </div>
       ))}
       {dropIndex === ids.length && <div className="lay-drop-line" />}

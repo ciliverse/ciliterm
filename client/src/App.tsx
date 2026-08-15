@@ -9,11 +9,21 @@ import {
 } from 'react';
 import { useSettings } from './settings/settings';
 import { applyTheme, applyCrtIntensity, resolveTheme } from './theme/themes';
-import { moveModule, hideModule, type ColumnId, type ModuleId } from './layout/layout';
+import {
+  hideModule,
+  isTerminal,
+  moveModule,
+  openCenterTerminal,
+  setModuleHeight,
+  type ColumnId,
+  type ModuleId,
+} from './layout/layout';
+import { ModuleFrame } from './components/ModuleFrame';
+import { Clock, ClockPanel } from './components/Clock';
 import { useMetrics } from './hooks/useMetrics';
 import { useMetricsHistory } from './hooks/useMetricsHistory';
 import { useControl } from './hooks/useControl';
-import { useTabs } from './components/Terminal/tabsStore';
+import { TabsProvider, useTabs } from './components/Terminal/tabsStore';
 import { TerminalArea } from './components/Terminal/TerminalArea';
 import {
   CpuCard,
@@ -30,8 +40,8 @@ import { SshManager } from './components/SshManager';
 import { LayoutSidebar } from './components/LayoutSidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { BootScreen } from './components/BootScreen';
+import { ParticleLogo } from './components/ParticleLogo';
 import { CommandPalette, type Command } from './components/CommandPalette';
-import { Clock } from './components/Clock';
 import { PanelErrorBoundary } from './components/PanelErrorBoundary';
 import { rate } from './utils/format';
 import { isShowcase } from './showcase';
@@ -114,6 +124,16 @@ export function App() {
         run: () => update({ showKeyboard: !settings.showKeyboard }),
       },
       { id: 'settings', title: 'Open settings', keywords: 'preferences theme layout', run: () => setShowSettings(true) },
+      ...(layout.center.length === 0
+        ? [
+            {
+              id: 'new-terminal',
+              title: 'New terminal',
+              keywords: 'restore center',
+              run: () => update({ layout: openCenterTerminal(layout, window.innerWidth) }),
+            } satisfies Command,
+          ]
+        : []),
     ];
     if (showcase) return base;
     const hostCmds: Command[] = hosts.map((h) => ({
@@ -136,6 +156,7 @@ export function App() {
     hosts,
     sessions,
     settings.showKeyboard,
+    layout,
     newTab,
     splitActive,
     closeActiveTab,
@@ -220,6 +241,18 @@ export function App() {
       case 'filesystem':
         // Showcase still shows the Files panel with simulated listings from the server.
         return <Filesystem cwd={showcase ? '/demo' : activeCwd} />;
+      case 'clock':
+        return <ClockPanel />;
+      default:
+        if (isTerminal(id)) {
+          if (id === 'terminal') return <TerminalArea />;
+          return (
+            <TabsProvider>
+              <TerminalArea />
+            </TabsProvider>
+          );
+        }
+        return null;
     }
   };
 
@@ -240,6 +273,10 @@ export function App() {
         onWidthChange={(width) =>
           update({ layout: { ...layout, widths: { ...layout.widths, [side]: width } } })
         }
+        onHeightChange={(id, height) => update({ layout: setModuleHeight(layout, id, height) })}
+        heights={layout.heights}
+        peerWidth={layout.widths[side === 'left' ? 'right' : 'left']}
+        centerOccupied={layout.center.length > 0}
         onDragStateChange={setDragging}
       />
     );
@@ -266,6 +303,16 @@ export function App() {
         <div className="brand">
           CILI<span className="accent">TERM</span>
         </div>
+        {layout.center.length === 0 && (
+          <button
+            type="button"
+            className="mini-btn"
+            title="new terminal"
+            onClick={() => update({ layout: openCenterTerminal(layout, window.innerWidth) })}
+          >
+            + TERM
+          </button>
+        )}
         {showcase && (
           <div className="stat showcase-badge" title="Public read-only exhibit — no host shell">
             <span className="badge-full">READ-ONLY DEMO</span>
@@ -318,9 +365,19 @@ export function App() {
             ⚙
           </button>
         </div>
-        <div className="desk-only">
-          <Clock />
-        </div>
+        {layout.header.includes('clock') && (
+          <div className="desk-only clock-slot">
+            <Clock />
+            <button
+              type="button"
+              className="clock-hide"
+              title="hide clock"
+              onClick={() => onHide('clock')}
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <span className={`conn-dot conn-${conn}`} title={`connection: ${conn}`} />
       </header>
 
@@ -337,8 +394,47 @@ export function App() {
         )}
         {sidebar('left', layout.left)}
 
-        <main className="center">
-          <TerminalArea />
+        <main
+          className={`center${layout.center.length === 0 ? ' is-vacant' : ''}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const id = e.dataTransfer.getData('text/plain') as ModuleId;
+            if (id) update({ layout: moveModule(layout, id, 'center', layout.center.length) });
+            setDragging(false);
+          }}
+        >
+          {layout.center.length === 0 ? (
+            <div className="center-hero">
+              <ParticleLogo />
+              <button
+                type="button"
+                className="mini-btn"
+                onClick={() => update({ layout: openCenterTerminal(layout, window.innerWidth) })}
+              >
+                new terminal
+              </button>
+            </div>
+          ) : (
+            layout.center.map((id) => (
+              <ModuleFrame
+                key={id}
+                id={id}
+                fill={isTerminal(id) && layout.center.length === 1}
+                height={layout.heights[id]}
+                onHeightChange={(mid, height) =>
+                  update({ layout: setModuleHeight(layout, mid, height) })
+                }
+                onHide={() => onHide(id)}
+                onDragStateChange={setDragging}
+              >
+                {renderModule(id)}
+              </ModuleFrame>
+            ))
+          )}
           {settings.showKeyboard && <Keyboard />}
         </main>
 

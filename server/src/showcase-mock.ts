@@ -146,14 +146,14 @@ export function collectShowcaseMetrics(): Metrics {
 }
 
 const GEO_NODES = [
-  { lat: 37.77, lng: -122.42, label: 'edge · SF', ip: '10.42.1.2', kind: 'conn' as const },
-  { lat: 51.5, lng: -0.12, label: 'edge · London', ip: '10.42.2.3', kind: 'conn' as const },
-  { lat: 35.68, lng: 139.69, label: 'ssh · Tokyo', ip: '10.42.3.4', kind: 'ssh' as const },
-  { lat: 1.35, lng: 103.82, label: 'edge · Singapore', ip: '10.42.4.5', kind: 'conn' as const },
-  { lat: -33.87, lng: 151.21, label: 'ssh · Sydney', ip: '10.42.5.6', kind: 'ssh' as const },
-  { lat: 52.52, lng: 13.4, label: 'edge · Berlin', ip: '10.42.6.7', kind: 'conn' as const },
-  { lat: 19.07, lng: 72.87, label: 'edge · Mumbai', ip: '10.42.7.8', kind: 'conn' as const },
-  { lat: 47.6, lng: -122.33, label: 'ssh · Seattle', ip: '10.42.8.9', kind: 'ssh' as const },
+  { lat: 37.77, lng: -122.42, label: 'edge · SF', ip: '10.42.1.2', kind: 'conn' as const, process: 'chrome', conns: 4 },
+  { lat: 51.5, lng: -0.12, label: 'edge · London', ip: '10.42.2.3', kind: 'conn' as const, process: 'curl', conns: 1 },
+  { lat: 35.68, lng: 139.69, label: 'tokyo', ip: '10.42.3.4', kind: 'ssh' as const, hostId: 'demo-tokyo', process: 'ssh', conns: 2 },
+  { lat: 1.35, lng: 103.82, label: 'edge · Singapore', ip: '10.42.4.5', kind: 'conn' as const, process: 'node', conns: 3 },
+  { lat: -33.87, lng: 151.21, label: 'sydney', ip: '10.42.5.6', kind: 'ssh' as const, hostId: 'demo-sydney' },
+  { lat: 52.52, lng: 13.4, label: 'edge · Berlin', ip: '10.42.6.7', kind: 'conn' as const, process: 'firefox', conns: 2 },
+  { lat: 19.07, lng: 72.87, label: 'edge · Mumbai', ip: '10.42.7.8', kind: 'conn' as const, process: 'apt', conns: 1 },
+  { lat: 47.6, lng: -122.33, label: 'seattle', ip: '10.42.8.9', kind: 'ssh' as const, hostId: 'demo-seattle', process: 'ssh', conns: 1 },
 ];
 
 /** Time-varying globe: nodes appear/disappear and jitter slightly. */
@@ -172,11 +172,15 @@ export function showcaseGeo(): GeoData {
   const offset = Math.floor(t / 4) % GEO_NODES.length;
   const active = Array.from({ length: activeCount }, (_, i) => {
     const n = GEO_NODES[(offset + i) % GEO_NODES.length]!;
+    const ssh = n.kind === 'ssh';
+    const up = !ssh || Math.sin(t * 0.4 + i) > -0.7;
     return {
       ...n,
       lat: n.lat + Math.sin(t * 0.8 + i) * 0.15,
       lng: n.lng + Math.cos(t * 0.7 + i) * 0.15,
       label: `${n.label}${Math.sin(t + i) > 0.6 ? ' ●' : ''}`,
+      up: ssh ? up : undefined,
+      latencyMs: ssh && up ? Math.round(18 + Math.abs(Math.sin(t + i)) * 40) : ssh ? null : undefined,
     };
   });
 

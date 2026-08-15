@@ -181,6 +181,11 @@ export const GeoPoint = z.object({
   label: z.string(),
   ip: z.string(),
   kind: GeoKind,
+  process: z.string().optional(),
+  conns: z.number().int().positive().optional(),
+  hostId: z.string().optional(),
+  latencyMs: z.number().nullable().optional(),
+  up: z.boolean().optional(),
 });
 export type GeoPoint = z.infer<typeof GeoPoint>;
 

@@ -36,7 +36,7 @@ export function SshManager() {
           </button>
         </span>
       </div>
-      <div className="list" style={{ maxHeight: 180 }}>
+      <div className="list">
         {hosts.length === 0 && <div className="metric-row">no saved hosts</div>}
         {hosts.map((h) => (
           <div key={h.id} className="list-item">

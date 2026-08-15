@@ -338,7 +338,7 @@ sysWss.on('connection', (ws: WebSocket) => {
   send({ t: 'geo', data: SHOWCASE ? showcaseGeo() : geo.snapshot() });
   const geoTimer = setInterval(
     () => send({ t: 'geo', data: SHOWCASE ? showcaseGeo() : geo.snapshot() }),
-    SHOWCASE ? 2500 : 20_000,
+    SHOWCASE ? 2500 : 2_000,
   );
 
   ws.on('message', async (raw) => {

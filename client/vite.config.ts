@@ -5,6 +5,9 @@ const BACKEND_PORT = process.env.CILITERM_PORT ?? '8787';
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: ['@tweenjs/tween.js', 'pusher.color', 'vec2'],
+  },
   build: {
     rollupOptions: {
       output: {
@@ -22,6 +25,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 5273,
     proxy: {
       '/pty': { target: `ws://127.0.0.1:${BACKEND_PORT}`, ws: true },

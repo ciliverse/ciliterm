@@ -18,7 +18,7 @@ export function SessionBar() {
         )}
         {showcase && <span className="sub">demo replay</span>}
       </div>
-      <div className="list" style={{ maxHeight: 160 }}>
+      <div className="list">
         {sessions.length === 0 && <div className="metric-row">no persistent sessions</div>}
         {sessions.map((s) => (
           <div key={s.name} className="list-item">

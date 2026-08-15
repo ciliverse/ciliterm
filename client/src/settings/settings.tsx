@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { DEFAULT_THEME_ID, type Theme } from '../theme/themes';
-import { DEFAULT_LAYOUT, type Layout } from '../layout/layout';
+import { DEFAULT_LAYOUT, normalizeLayout, type Layout } from '../layout/layout';
 
 export interface Settings {
   fontFamily: string;
@@ -52,11 +52,7 @@ function load(): Settings {
       const parsed = JSON.parse(raw) as Partial<Settings>;
       const merged = { ...DEFAULTS, ...parsed };
       // Ensure the layout is well-formed even across upgrades.
-      merged.layout = {
-        left: parsed.layout?.left ?? DEFAULT_LAYOUT.left,
-        right: parsed.layout?.right ?? DEFAULT_LAYOUT.right,
-        widths: { ...DEFAULT_LAYOUT.widths, ...(parsed.layout?.widths ?? {}) },
-      };
+      merged.layout = normalizeLayout(parsed.layout);
       return merged;
     }
   } catch {

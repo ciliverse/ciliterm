@@ -1,17 +1,18 @@
 import dns from 'node:dns/promises';
 import net from 'node:net';
 import si from 'systeminformation';
-import type { GeoArc, GeoData, GeoPoint } from '@ciliterm/shared';
+import type { GeoData } from '@ciliterm/shared';
 import type { HostStore } from './hosts.js';
 import { isPublicIp } from './net-util.js';
-
-interface GeoLoc {
-  lat: number;
-  lng: number;
-  city: string;
-  country: string;
-  ip: string;
-}
+import {
+  MAX_ENDPOINTS,
+  mergeGeoSnapshot,
+  summarizePeers,
+  type GeoLoc,
+  type HostProbe,
+  type ResolvedHost,
+} from './geo-merge.js';
+import { probeTcp } from './host-probe.js';
 
 interface ApiRow {
   status: string;
@@ -23,10 +24,15 @@ interface ApiRow {
 }
 
 const API_FIELDS = 'status,country,city,lat,lon,query';
-const SELF_TTL_MS = 60 * 60 * 1000; // public IP rarely changes
-const MAX_ENDPOINTS = 40;
+const SELF_TTL_MS = 60 * 60 * 1000;
+const DNS_TTL_MS = 5 * 60 * 1000;
+const CHEAP_TICK_MS = 2_000;
+const PROBE_EVERY_MS = 30_000;
+const PROBE_TIMEOUT_MS = 1_500;
+const MAX_PROBES_IN_FLIGHT = 2;
 
 const ipCache = new Map<string, GeoLoc | null>();
+const dnsCache = new Map<string, { at: number; ip: string | null }>();
 let selfCache: { at: number; loc: GeoLoc | null } | null = null;
 
 function rowToLoc(r: ApiRow): GeoLoc | null {
@@ -87,95 +93,40 @@ async function geolocateBatch(ips: string[]): Promise<Map<string, GeoLoc | null>
   return out;
 }
 
-/** Established outbound peer IPs, most-connected first, deduped and public-only. */
-async function activePeerIps(): Promise<string[]> {
+async function activePeers() {
   try {
     const conns = await si.networkConnections();
-    const counts = new Map<string, number>();
-    for (const c of conns) {
-      if (c.state !== 'ESTABLISHED') continue;
-      const ip = c.peerAddress;
-      if (!isPublicIp(ip)) continue;
-      counts.set(ip, (counts.get(ip) ?? 0) + 1);
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([ip]) => ip);
+    return summarizePeers(conns, isPublicIp, MAX_ENDPOINTS);
   } catch {
     return [];
   }
 }
 
 async function resolveHostIp(host: string): Promise<string | null> {
-  if (net.isIP(host)) return host;
+  const cached = dnsCache.get(host);
+  if (cached && Date.now() - cached.at < DNS_TTL_MS) return cached.ip;
+  if (net.isIP(host)) {
+    dnsCache.set(host, { at: Date.now(), ip: host });
+    return host;
+  }
   try {
     const { address } = await dns.lookup(host);
+    dnsCache.set(host, { at: Date.now(), ip: address });
     return address;
   } catch {
+    dnsCache.set(host, { at: Date.now(), ip: null });
     return null;
   }
 }
 
-async function collectGeo(hosts: HostStore): Promise<GeoData> {
-  const self = await geolocateSelf();
-
-  // Live outbound connections.
-  const connIps = (await activePeerIps()).slice(0, MAX_ENDPOINTS);
-
-  // Saved SSH hosts (resolve hostnames -> IPs).
-  const sshList = hosts.list();
-  const sshResolved = await Promise.all(
-    sshList.map(async (h) => ({ host: h, ip: await resolveHostIp(h.host) })),
-  );
-  const sshIps = sshResolved
-    .map((r) => r.ip)
-    .filter((ip): ip is string => !!ip && isPublicIp(ip));
-
-  const locs = await geolocateBatch([...new Set([...connIps, ...sshIps])]);
-
-  const points: GeoPoint[] = [];
-  const arcs: GeoArc[] = [];
-  const seen = new Set<string>();
-
-  const push = (ip: string, kind: 'conn' | 'ssh', label: string): void => {
-    const loc = locs.get(ip);
-    if (!loc || seen.has(`${kind}:${ip}`)) return;
-    seen.add(`${kind}:${ip}`);
-    const place = [loc.city, loc.country].filter(Boolean).join(', ') || ip;
-    points.push({ lat: loc.lat, lng: loc.lng, label: `${label} · ${place}`, ip, kind });
-    if (self) {
-      arcs.push({
-        startLat: self.lat,
-        startLng: self.lng,
-        endLat: loc.lat,
-        endLng: loc.lng,
-        label: `${label} · ${place}`,
-        kind,
-      });
-    }
-  };
-
-  for (const ip of connIps) push(ip, 'conn', ip);
-  for (const r of sshResolved) {
-    if (r.ip && isPublicIp(r.ip)) push(r.ip, 'ssh', r.host.label);
-  }
-
-  const selfPoint: GeoPoint | null = self
-    ? {
-        lat: self.lat,
-        lng: self.lng,
-        label: `HOME · ${[self.city, self.country].filter(Boolean).join(', ') || self.ip}`,
-        ip: self.ip,
-        kind: 'self',
-      }
-    : null;
-
-  return { self: selfPoint, points, arcs };
-}
-
-/** Maintains a shared geo snapshot refreshed on a slow cadence (API-friendly). */
+/** Shared geo snapshot: cheap 2s tick, ip-api on miss, TCP probes staggered. */
 export class GeoService {
   private data: GeoData = { self: null, points: [], arcs: [] };
   private timer: NodeJS.Timeout | null = null;
   private readonly disabled: boolean;
+  private readonly probes = new Map<string, HostProbe>();
+  private readonly lastProbeAt = new Map<string, number>();
+  private inFlight = 0;
 
   constructor(
     private hosts: HostStore,
@@ -184,7 +135,7 @@ export class GeoService {
     this.disabled = opts?.disabled ?? false;
     if (this.disabled) return;
     void this.refresh();
-    this.timer = setInterval(() => void this.refresh(), 30_000);
+    this.timer = setInterval(() => void this.refresh(), CHEAP_TICK_MS);
   }
 
   snapshot(): GeoData {
@@ -194,11 +145,65 @@ export class GeoService {
   async refresh(): Promise<GeoData> {
     if (this.disabled) return this.data;
     try {
-      this.data = await collectGeo(this.hosts);
+      this.data = await this.collect();
     } catch {
       // keep last good snapshot
     }
     return this.data;
+  }
+
+  private async collect(): Promise<GeoData> {
+    const [self, peers] = await Promise.all([geolocateSelf(), activePeers()]);
+    const publicHosts = await this.listProbeTargets();
+    const locs = await geolocateBatch([
+      ...new Set([...peers.map((p) => p.ip), ...publicHosts.map((h) => h.ip)]),
+    ]);
+    this.kickProbes(publicHosts);
+    return mergeGeoSnapshot({
+      self,
+      peers,
+      hosts: publicHosts.map(({ id, label, ip }) => ({ id, label, ip })),
+      locs,
+      probes: this.probes,
+    });
+  }
+
+  private async listProbeTargets(): Promise<
+    Array<ResolvedHost & { port: number; probeHost: string }>
+  > {
+    const resolved = await Promise.all(
+      this.hosts.list().map(async (h) => ({ host: h, ip: await resolveHostIp(h.host) })),
+    );
+    const out: Array<ResolvedHost & { port: number; probeHost: string }> = [];
+    for (const r of resolved) {
+      if (!r.ip || !isPublicIp(r.ip)) continue;
+      out.push({
+        id: r.host.id,
+        label: r.host.label,
+        ip: r.ip,
+        port: r.host.port,
+        probeHost: r.host.host,
+      });
+    }
+    return out;
+  }
+
+  private kickProbes(hosts: Array<ResolvedHost & { port: number; probeHost: string }>): void {
+    const now = Date.now();
+    for (const h of hosts) {
+      if (this.inFlight >= MAX_PROBES_IN_FLIGHT) break;
+      const last = this.lastProbeAt.get(h.id) ?? 0;
+      if (now - last < PROBE_EVERY_MS) continue;
+      this.lastProbeAt.set(h.id, now);
+      this.inFlight += 1;
+      void probeTcp(h.probeHost, h.port, PROBE_TIMEOUT_MS)
+        .then((result) => {
+          this.probes.set(h.id, result);
+        })
+        .finally(() => {
+          this.inFlight -= 1;
+        });
+    }
   }
 
   dispose(): void {

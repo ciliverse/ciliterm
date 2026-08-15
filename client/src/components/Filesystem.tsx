@@ -38,7 +38,7 @@ export function Filesystem({ cwd }: { cwd: string | undefined }) {
           {path ? shorten(path) : '—'}
         </span>
       </div>
-      <div className="list" style={{ maxHeight: 260 }}>
+      <div className="list">
         <div className="list-item" onClick={() => path && setPath(parent(path))}>
           <span className="name">📁 ..</span>
         </div>

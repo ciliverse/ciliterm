@@ -3,13 +3,14 @@ import { useSettings } from '../settings/settings';
 import { BUILTIN_THEMES, parseCustomTheme } from '../theme/themes';
 import {
   DEFAULT_LAYOUT,
-  MODULE_LABELS,
   hiddenModules,
   hideModule,
+  moduleLabel,
   moveModule,
-  type ColumnId,
+  openCenterTerminal,
   type Layout,
   type ModuleId,
+  type SlotId,
 } from '../layout/layout';
 
 function reorder(col: ModuleId[], from: number, to: number): ModuleId[] {
@@ -26,19 +27,19 @@ function LayoutEditor({
   layout: Layout;
   onChange: (l: Layout) => void;
 }) {
-  const columns: ColumnId[] = ['left', 'right'];
+  const slots: SlotId[] = ['left', 'right', 'header', 'center'];
   const hidden = hiddenModules(layout);
 
   return (
     <div className="field">
       <label>Layout (drag panels in the UI, or arrange here)</label>
-      {columns.map((side) => (
+      {slots.map((side) => (
         <div key={side} className="lay-edit-col">
-          <div className="sub">{side} column</div>
+          <div className="sub">{side}</div>
           {layout[side].length === 0 && <div className="metric-row">empty</div>}
           {layout[side].map((id, i) => (
             <div key={id} className="lay-edit-row">
-              <span className="name">{MODULE_LABELS[id]}</span>
+              <span className="name">{moduleLabel(id)}</span>
               <span className="row-actions">
                 <button
                   className="mini-btn"
@@ -56,7 +57,7 @@ function LayoutEditor({
                 </button>
                 <button
                   className="mini-btn"
-                  title={side === 'left' ? 'move to right' : 'move to left'}
+                  title="move to other column"
                   onClick={() =>
                     onChange(
                       moveModule(
@@ -68,7 +69,7 @@ function LayoutEditor({
                     )
                   }
                 >
-                  {side === 'left' ? '→' : '←'}
+                  {side === 'left' ? '→' : side === 'right' ? '←' : '↕'}
                 </button>
                 <button className="mini-btn danger" onClick={() => onChange(hideModule(layout, id))}>
                   ✕
@@ -83,7 +84,7 @@ function LayoutEditor({
           <div className="sub">hidden</div>
           {hidden.map((id) => (
             <div key={id} className="lay-edit-row">
-              <span className="name">{MODULE_LABELS[id]}</span>
+              <span className="name">{moduleLabel(id)}</span>
               <span className="row-actions">
                 <button
                   className="mini-btn"
@@ -96,6 +97,26 @@ function LayoutEditor({
                   onClick={() => onChange(moveModule(layout, id, 'right', Number.MAX_SAFE_INTEGER))}
                 >
                   + right
+                </button>
+                {id === 'clock' && (
+                  <button
+                    className="mini-btn"
+                    onClick={() => onChange(moveModule(layout, id, 'header', 0))}
+                  >
+                    + header
+                  </button>
+                )}
+                <button
+                  className="mini-btn"
+                  onClick={() =>
+                    onChange(
+                      id === 'terminal'
+                        ? openCenterTerminal(layout, window.innerWidth)
+                        : moveModule(layout, id, 'center', Number.MAX_SAFE_INTEGER),
+                    )
+                  }
+                >
+                  + center
                 </button>
               </span>
             </div>

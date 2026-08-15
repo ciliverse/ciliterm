@@ -21,3 +21,14 @@ export function Clock() {
     </div>
   );
 }
+
+export function ClockPanel() {
+  return (
+    <div className="panel">
+      <div className="panel-title">
+        <span>Clock</span>
+      </div>
+      <Clock />
+    </div>
+  );
+}
