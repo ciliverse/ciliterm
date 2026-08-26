@@ -1,18 +1,19 @@
 :root {
   --bg: #04070a;
-  --bg-panel: rgba(8, 18, 24, 0.72);
+  --bg-panel: rgba(6, 12, 16, 0.94);
   --bg-panel-solid: #071016;
   --cyan: #35e6ff;
   --cyan-dim: #1a7f92;
-  --cyan-faint: rgba(53, 230, 255, 0.14);
+  --cyan-faint: rgba(53, 230, 255, 0.32);
+  --cyan-wash: rgba(53, 230, 255, 0.09);
   --orange: #ffae00;
   --red: #ff4d5e;
   --green: #4dffb0;
   --text: #cfeef5;
   --text-dim: #6f98a3;
-  --grid-line: rgba(53, 230, 255, 0.08);
-  --glow: 0 0 8px rgba(53, 230, 255, 0.35);
-  --ambient: rgba(53, 230, 255, 0.07);
+  --grid-line: rgba(53, 230, 255, 0.1);
+  --glow: none;
+  --ambient: rgba(53, 230, 255, 0.04);
   --font-ui: 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
   /* CRT intensity knobs (0–1 scale, driven by applyCrtIntensity) */
   --crt-scan: 0.4;
@@ -22,6 +23,12 @@
 
 * {
   box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea {
+  border-radius: 0;
 }
 
 html,
@@ -53,7 +60,8 @@ body {
   color: var(--text);
   font-family: var(--font-ui);
   overflow: hidden;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
 }
 
 /* Subtle animated scanlines + grid backdrop (CRT intensity scales opacity) */
@@ -96,33 +104,38 @@ html[data-crt='off'] .app {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 8px 14px;
-  padding-top: max(8px, env(safe-area-inset-top));
-  padding-left: max(10px, env(safe-area-inset-left));
-  padding-right: max(10px, env(safe-area-inset-right));
-  border-bottom: 1px solid var(--cyan-faint);
-  background: linear-gradient(180deg, var(--cyan-faint), transparent);
+  gap: 14px;
+  min-height: 38px;
+  padding: 6px 14px;
+  padding-top: max(6px, env(safe-area-inset-top));
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+  border-bottom: 1px solid var(--cyan-dim);
+  background: var(--bg-panel-solid);
   flex-shrink: 0;
   z-index: 60;
 }
 
+/* Visibility utility: must outrank any component's own `display`, otherwise a
+   later rule leaks the narrow-screen controls onto desktop where the drawers
+   they toggle do not exist. */
 .mobile-only {
-  display: none;
-}
-.mobile-stat {
-  display: none;
+  display: none !important;
 }
 .badge-short {
   display: none;
 }
 
+/* Wordmark carries the same left accent bar as the panel title plates, so the
+   chrome reads as one system. */
 .brand {
+  position: relative;
+  padding-left: 9px;
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: 0.3em;
   color: var(--cyan);
-  text-shadow: var(--glow);
-  font-size: 16px;
+  text-shadow: none;
+  font-size: 14px;
 }
 .brand .accent {
   color: var(--orange);
@@ -131,13 +144,50 @@ html[data-crt='off'] .app {
 .topbar .stat {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
   font-size: 12px;
   color: var(--text-dim);
+}
+.topbar .stat .k {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+/* Hairline rules turn the readouts into a single instrument strip. */
+.topbar .stat + .stat {
+  padding-left: 14px;
+  border-left: 1px solid var(--cyan-faint);
 }
 .topbar .stat b {
   color: var(--text);
   font-weight: 600;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  min-width: 30px;
+  text-align: right;
+}
+/* Micro gauge: the same rail language as the panel gauges, so the header reads
+   as instrumentation rather than a line of labels. */
+.topbar .stat .micro {
+  align-self: center;
+  width: 34px;
+  height: 3px;
+  background: color-mix(in srgb, var(--cyan) 16%, transparent);
+}
+.topbar .stat .micro > i {
+  display: block;
+  height: 100%;
+  background: var(--cyan);
+}
+.topbar .stat.is-warn b {
+  color: var(--orange);
+}
+.topbar .stat.is-warn .micro {
+  background: color-mix(in srgb, var(--orange) 16%, transparent);
+}
+.topbar .stat.is-warn .micro > i {
+  background: var(--orange);
 }
 
 .topbar .showcase-badge {
@@ -153,31 +203,52 @@ html[data-crt='off'] .app {
   flex: 1;
 }
 
+/* One segmented switch instead of three mismatched boxes. The 1px gap exposes
+   the group background as dividers, which stays correct when a button is
+   hidden at a given breakpoint. */
 .toggle-group {
   display: flex;
-  gap: 4px;
+  gap: 1px;
+  background: var(--cyan-faint);
+  border: 1px solid var(--cyan-faint);
 }
 .toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--cyan-faint);
   color: var(--text-dim);
   font-family: var(--font-ui);
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
   padding: 4px 8px;
   cursor: pointer;
-  border-radius: 3px;
-  transition: all 0.15s;
+  border-radius: 0;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.toggle-group > .toggle-btn {
+  border: 0;
+  min-width: 34px;
+  height: 22px;
+  padding: 0 9px;
+  background: var(--bg-panel-solid);
 }
 .toggle-btn:hover {
   color: var(--cyan);
   border-color: var(--cyan-dim);
 }
+.toggle-group > .toggle-btn:hover {
+  background: color-mix(in srgb, var(--cyan) 10%, var(--bg-panel-solid));
+}
 .toggle-btn.active {
   color: var(--cyan);
   border-color: var(--cyan);
   box-shadow: var(--glow);
-  background: var(--cyan-faint);
+  background: var(--cyan-wash);
+}
+.toggle-group > .toggle-btn.active {
+  background: color-mix(in srgb, var(--cyan) 14%, var(--bg-panel-solid));
 }
 
 .conn-dot {
@@ -188,16 +259,16 @@ html[data-crt='off'] .app {
 }
 .conn-open {
   background: var(--green);
-  box-shadow: 0 0 8px var(--green);
+  box-shadow: none;
 }
 .conn-connecting {
   background: var(--orange);
-  box-shadow: 0 0 8px var(--orange);
+  box-shadow: none;
   animation: pulse 1s infinite;
 }
 .conn-closed {
   background: var(--red);
-  box-shadow: 0 0 8px var(--red);
+  box-shadow: none;
 }
 @keyframes pulse {
   50% {
@@ -257,16 +328,36 @@ html[data-crt='off'] .app {
   outline: 1px dashed var(--cyan-faint);
   outline-offset: -4px;
 }
+/* A 1px rule inside a 7px grab zone: a solid 7px band sat flush against the
+   column's scrollbar and the two read as one smeared strip. */
 .lay-splitter {
+  position: relative;
   width: 7px;
   flex-shrink: 0;
   cursor: col-resize;
+  background: transparent;
+}
+.lay-splitter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
   background: var(--cyan-faint);
   transition: background 0.12s ease;
 }
-.lay-splitter:hover {
+.lay-splitter:hover::before {
   background: var(--cyan);
-  box-shadow: var(--glow);
+}
+
+/* Left column scrolls on its outer edge so the scrollbar mirrors the right
+   column's and never crowds the splitter. */
+.lay-sidebar.left > .lay-col {
+  direction: rtl;
+}
+.lay-sidebar.left > .lay-col > * {
+  direction: ltr;
 }
 .lay-item {
   position: relative;
@@ -293,7 +384,7 @@ html[data-crt='off'] .app {
   cursor: grab;
   color: #001014;
   background: var(--cyan);
-  border-radius: 0 0 4px 0;
+  border-radius: 0;
   font-size: 11px;
 }
 .lay-grip:active {
@@ -309,7 +400,7 @@ html[data-crt='off'] .app {
   color: var(--text-dim);
   border: 1px solid var(--cyan-faint);
   border-left: none;
-  border-radius: 0 4px 4px 0;
+  border-radius: 0;
   font-size: 9px;
 }
 .lay-hide:hover {
@@ -319,8 +410,8 @@ html[data-crt='off'] .app {
 .lay-drop-line {
   height: 2px;
   background: var(--cyan);
-  box-shadow: var(--glow);
-  border-radius: 2px;
+  box-shadow: none;
+  border-radius: 0;
 }
 .mod-frame {
   position: relative;
@@ -338,7 +429,7 @@ html[data-crt='off'] .app {
   z-index: 80;
   height: auto !important;
   background: var(--bg);
-  box-shadow: 0 0 0 1px var(--cyan-dim), var(--glow);
+  box-shadow: 0 0 0 1px var(--cyan);
 }
 .mod-body {
   flex: 1;
@@ -373,44 +464,46 @@ html[data-crt='off'] .app {
   flex: 1 1 0;
   max-height: none;
 }
-.mod-frame.is-sized canvas.graph,
-.mod-frame.is-fill canvas.graph,
-.mod-frame.is-full canvas.graph {
-  flex: 1 1 48px;
-  min-height: 48px;
-  height: auto;
+.mod-frame.is-sized .graph-wrap,
+.mod-frame.is-fill .graph-wrap,
+.mod-frame.is-full .graph-wrap {
+  flex: 1 1 72px;
+  min-height: 72px;
 }
+/* Tool cluster docked into the module's top-right corner. The module name is
+   rendered once, by the panel's own title plate. */
 .mod-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 8;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  height: 26px;
-  padding: 0 8px 0 0;
+  align-items: stretch;
+  height: 23px;
+  border-left: 1px solid var(--cyan-faint);
   border-bottom: 1px solid var(--cyan-faint);
-  background: rgba(0, 0, 0, 0.25);
+  opacity: 0.5;
+  transition: opacity 0.14s ease;
+}
+.mod-frame:hover > .mod-bar,
+.mod-bar:focus-within {
+  opacity: 1;
 }
 .mod-grip {
-  width: 22px;
-  height: 26px;
+  width: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  color: var(--cyan);
-  font-size: 12px;
+  color: var(--cyan-dim);
+  font-size: 11px;
   user-select: none;
+}
+.mod-grip:hover {
+  color: var(--cyan);
 }
 .mod-grip:active {
   cursor: grabbing;
-}
-.mod-bar-name {
-  font-size: 10px;
-  letter-spacing: 1px;
-  color: var(--text-dim);
-}
-.mod-bar-spacer {
-  flex: 1;
 }
 .mod-tools {
   position: absolute;
@@ -421,30 +514,30 @@ html[data-crt='off'] .app {
   gap: 4px;
 }
 .mod-tool {
-  height: 22px;
-  padding: 0 7px;
-  border: 1px solid var(--cyan-faint);
-  background: rgba(4, 12, 18, 0.72);
+  padding: 0 8px;
+  border: 0;
+  border-left: 1px solid var(--cyan-faint);
+  background: transparent;
   color: var(--text-dim);
   cursor: pointer;
-  line-height: 20px;
-  font-size: 10px;
-  letter-spacing: 1px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.12em;
 }
 .mod-tool:hover {
   color: var(--cyan);
-  border-color: var(--cyan);
+  background: var(--cyan-wash);
 }
 .mod-tool.is-hide:hover {
   color: var(--red);
-  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
 }
 .mod-resize {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 8px;
+  height: 7px;
   z-index: 7;
   cursor: ns-resize;
 }
@@ -452,20 +545,26 @@ html[data-crt='off'] .app {
   content: '';
   position: absolute;
   left: 50%;
-  top: 2px;
-  width: 36px;
-  height: 2px;
-  margin-left: -18px;
-  background: var(--cyan-dim);
-}
-.mod-resize:hover {
+  bottom: 2px;
+  width: 28px;
+  height: 1px;
+  margin-left: -14px;
   background: var(--cyan-faint);
+  transition:
+    width 0.14s ease,
+    background 0.14s ease;
+}
+.mod-resize:hover::before {
+  width: 56px;
+  background: var(--cyan);
 }
 .clock-slot {
   position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
+  padding-left: 14px;
+  border-left: 1px solid var(--cyan-faint);
 }
 .clock-hide {
   opacity: 0;
@@ -481,6 +580,90 @@ html[data-crt='off'] .app {
 }
 .clock-hide:hover {
   color: var(--red);
+}
+
+.clock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.clock-time {
+  display: flex;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--cyan);
+  text-shadow: none;
+}
+.clock-hms {
+  letter-spacing: 0.28em;
+}
+.clock-ms {
+  letter-spacing: 0.16em;
+  font-weight: 500;
+  font-size: 0.62em;
+  color: var(--cyan);
+  opacity: 0.55;
+  text-shadow: none;
+}
+.clock-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.clock-panel {
+  flex: 1;
+  min-height: 0;
+}
+.clock-panel .clock {
+  flex: 1;
+  justify-content: center;
+  padding: 8px 2px 6px;
+}
+.clock-panel .clock-time {
+  font-size: 22px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--cyan-faint);
+}
+.mod-frame.is-full .clock-panel .clock {
+  align-items: center;
+  text-align: center;
+}
+.mod-frame.is-full .clock-panel .clock-time {
+  font-size: clamp(40px, 8vw, 84px);
+}
+.mod-frame.is-full .clock-meta {
+  justify-content: center;
+  font-size: 13px;
+  letter-spacing: 0.28em;
+}
+.topbar .clock {
+  align-items: flex-end;
+  text-align: right;
+  gap: 3px;
+}
+.topbar .clock-time {
+  font-size: 13px;
+  text-shadow: none;
+}
+.topbar .clock-hms {
+  letter-spacing: 0.16em;
+}
+.topbar .clock-ms {
+  font-size: 0.72em;
+}
+.topbar .clock-meta {
+  justify-content: flex-end;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  gap: 8px;
 }
 .center-empty,
 .center-hero {
@@ -500,7 +683,7 @@ html[data-crt='off'] .app {
   letter-spacing: 10px;
   font-size: clamp(22px, 5vw, 48px);
   color: var(--cyan);
-  text-shadow: var(--glow);
+  text-shadow: none;
   white-space: nowrap;
 }
 .brand-mark span {
@@ -517,8 +700,8 @@ html[data-crt='off'] .app {
   height: 100%;
 }
 .lay-empty {
-  border: 1px dashed var(--cyan-faint);
-  border-radius: 4px;
+  border: 1px dashed var(--cyan-dim);
+  border-radius: 0;
   padding: 20px 10px;
   text-align: center;
   color: var(--text-dim);
@@ -540,49 +723,67 @@ html[data-crt='off'] .app {
 
 /* ---- panels ---- */
 .panel {
-  border: 1px solid var(--cyan-faint);
+  border: 1px solid var(--cyan-dim);
   background: var(--bg-panel);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 10px;
   position: relative;
 }
-.panel::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 14px;
-  height: 14px;
-  border-top: 1px solid var(--cyan);
-  border-left: 1px solid var(--cyan);
-}
-.panel::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 14px;
-  height: 14px;
-  border-bottom: 1px solid var(--cyan);
-  border-right: 1px solid var(--cyan);
-}
+/* A header line, not a label plate: the name recedes and the reading below it
+   is what the eye lands on. Carries the plot's full scale, so the trace under
+   it is a measurement rather than a shape. */
 .panel-title {
-  font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--cyan);
-  margin-bottom: 8px;
+  flex-shrink: 0;
+  margin: 0 0 8px;
+  padding-bottom: 5px;
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--cyan-faint);
+}
+.panel-title > :first-child {
+  color: var(--text);
+  flex-shrink: 0;
 }
 .panel-title .sub {
+  display: flex;
+  min-width: 0;
+  font-size: 10px;
   color: var(--text-dim);
-  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.panel-title .sub > i {
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The plot's full scale is axis information, so it never truncates; softer
+   metadata ahead of it gives way instead. */
+.panel-title .sub > i:last-child {
+  flex-shrink: 0;
+}
+.panel-title .sub > i + i {
+  margin-left: 7px;
+  padding-left: 7px;
+  border-left: 1px solid var(--cyan-faint);
+}
+/* Keep the title clear of the docked tool cluster. */
+.mod-frame .panel-title {
+  padding-right: 94px;
 }
 
 .metric-row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
   font-size: 12px;
   padding: 2px 0;
   color: var(--text-dim);
@@ -590,53 +791,109 @@ html[data-crt='off'] .app {
 .metric-row b {
   color: var(--text);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-.bar {
-  height: 6px;
-  background: rgba(53, 230, 255, 0.1);
-  border-radius: 3px;
+/* Secondary caption under a title plate — hardware metadata, not a reading. */
+.panel-note {
+  font-size: 10px;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  margin-top: 4px;
 }
-.bar > span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
-  box-shadow: var(--glow);
+
+/* The headline reading of a monitor panel: one notch above body text, with the
+   unit demoted so the digits carry the emphasis. */
+.metric-row.is-lead {
+  padding: 0 0 6px;
 }
-.bar.warn > span {
-  background: linear-gradient(90deg, #a86b00, var(--orange));
-  box-shadow: 0 0 8px var(--orange);
+.metric-row.is-lead > :first-child {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.metric-row.is-lead b {
+  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.metric-row.is-lead .u {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+.metric-row.is-lead.is-split > * {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  color: var(--text);
+}
+/* Keys the two readings to the solid and dashed traces in the plot below. */
+.metric-row .leg {
+  display: inline-block;
+  width: 13px;
+  margin-right: 5px;
+  vertical-align: middle;
+  border-top: 2px solid var(--cyan);
+}
+.metric-row .leg.is-dashed {
+  border-top: 0;
+  border-bottom: 2px dashed var(--cyan);
+  opacity: 0.62;
+}
+
+/* Gauge: continuous dim track, solid fill, and a needle tick standing proud of
+   the rail to mark the current reading. */
 .line-bar {
   position: relative;
-  height: 2px;
-  margin: 6px 0 4px;
-  background: repeating-linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--cyan) 28%, transparent) 0 3px,
-    transparent 3px 7px
-  );
+  height: 3px;
+  margin: 7px 0 5px;
+  background: color-mix(in srgb, var(--cyan) 15%, transparent);
 }
 .line-bar > span {
+  position: relative;
   display: block;
-  height: 2px;
+  height: 100%;
+  background: var(--cyan);
+}
+.line-bar > span::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+  width: 1px;
+  height: 7px;
   background: var(--cyan);
 }
 .line-bar.is-warn {
-  background: repeating-linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--orange) 28%, transparent) 0 3px,
-    transparent 3px 7px
-  );
+  background: color-mix(in srgb, var(--orange) 15%, transparent);
 }
-.line-bar.is-warn > span {
+.line-bar.is-warn > span,
+.line-bar.is-warn > span::after {
   background: var(--orange);
 }
+/* The canvas draws its own value and time axes, so the wrapper adds no rules of
+   its own. Earlier CSS ticks here measured nothing. */
 .graph-wrap {
+  position: relative;
   width: 100%;
-  min-height: 48px;
+  flex: 1 1 64px;
+  min-height: 64px;
 }
 canvas.graph {
   display: block;
@@ -665,8 +922,8 @@ canvas.graph {
   gap: 6px;
   padding: 5px 10px;
   font-size: 12px;
-  border: 1px solid var(--cyan-faint);
-  border-radius: 3px 3px 0 0;
+  border: 1px solid var(--cyan-dim);
+  border-radius: 0;
   color: var(--text-dim);
   cursor: pointer;
   background: transparent;
@@ -674,8 +931,19 @@ canvas.graph {
 }
 .tab.active {
   color: var(--cyan);
-  border-color: var(--cyan);
-  background: var(--cyan-faint);
+  border-color: var(--cyan-dim);
+  background: var(--cyan-wash);
+  position: relative;
+}
+/* Selector-switch cue: the live tab is capped by a bright rail. */
+.tab.active::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  height: 2px;
+  background: var(--cyan);
 }
 .tab .close {
   color: var(--text-dim);
@@ -689,11 +957,11 @@ canvas.graph {
 }
 .tab-add {
   padding: 5px 10px;
-  border: 1px dashed var(--cyan-faint);
+  border: 1px dashed var(--cyan-dim);
   background: transparent;
   color: var(--cyan);
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 0;
   font-family: var(--font-ui);
 }
 
@@ -707,14 +975,14 @@ canvas.graph {
   flex: 1;
   min-width: 0;
   position: relative;
-  border: 1px solid var(--cyan-faint);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--cyan-dim);
+  border-radius: 0;
+  background: #020508;
   overflow: hidden;
 }
 .pane.focused {
-  border-color: var(--cyan-dim);
-  box-shadow: inset 0 0 24px rgba(53, 230, 255, 0.06);
+  border-color: var(--cyan);
+  box-shadow: none;
 }
 .pane .xterm-holder {
   position: absolute;
@@ -757,16 +1025,17 @@ canvas.graph {
   font-size: 12px;
 }
 .list-item {
+  position: relative;
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding: 3px 4px;
+  padding: 3px 4px 3px 8px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 0;
   color: var(--text-dim);
 }
 .list-item:hover {
-  background: var(--cyan-faint);
+  background: var(--cyan-wash);
   color: var(--text);
 }
 .list-item .mono {
@@ -789,7 +1058,7 @@ canvas.graph {
   font-size: 10px;
   padding: 2px 6px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 0;
   font-family: var(--font-ui);
 }
 .mini-btn:hover {
@@ -951,15 +1220,22 @@ canvas.graph {
   cursor: pointer;
   text-align: left;
 }
+/* A state marker, not a side stripe: hollow for a discovered peer, filled for a
+   configured SSH host, red only when the host is actually down. */
 .globe-hud-row i {
   grid-row: 1 / span 2;
-  align-self: stretch;
-  background: var(--orange);
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  box-sizing: border-box;
+  border: 1px solid var(--cyan);
+  background: transparent;
 }
 .globe-hud-row.kind-ssh i {
   background: var(--cyan);
 }
 .globe-hud-row.is-down i {
+  border-color: var(--red);
   background: var(--red);
 }
 .globe-hud-row b {
@@ -977,7 +1253,7 @@ canvas.graph {
   white-space: nowrap;
 }
 .globe-hud-row.is-on {
-  background: var(--cyan-faint);
+  background: var(--cyan-wash);
 }
 
 /* ---- modal ---- */
@@ -997,8 +1273,8 @@ canvas.graph {
   overflow-y: auto;
   background: var(--bg-panel-solid);
   border: 1px solid var(--cyan);
-  box-shadow: var(--glow);
-  border-radius: 6px;
+  box-shadow: none;
+  border-radius: 0;
   padding: 18px;
 }
 .modal h3 {
@@ -1036,7 +1312,7 @@ canvas.graph {
 }
 .field textarea {
   resize: vertical;
-  border-radius: 3px;
+  border-radius: 0;
   line-height: 1.4;
 }
 .modal-actions {
@@ -1073,7 +1349,7 @@ canvas.graph {
   font-size: clamp(10px, 1.1vw, 13px);
   line-height: 1;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1093,12 +1369,15 @@ canvas.graph {
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-thumb {
+  background: var(--cyan-faint);
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
   background: var(--cyan-dim);
-  border-radius: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -1148,9 +1427,9 @@ canvas.graph {
   padding: 10px 12px;
   background: rgba(6, 14, 20, 0.92);
   border: 1px solid var(--cyan-dim);
-  border-left: 3px solid var(--cyan);
-  border-radius: 5px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  border-left: 2px solid var(--cyan);
+  border-radius: 0;
+  box-shadow: none;
   font-size: 11px;
 }
 .globe-detail.kind-self {
@@ -1291,7 +1570,7 @@ canvas.graph {
   font-size: 12px;
   padding: 1px 4px;
   width: 90px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 /* ---- context menu ---- */
@@ -1301,11 +1580,9 @@ canvas.graph {
   min-width: 150px;
   padding: 4px;
   background: var(--bg-panel-solid);
-  border: 1px solid var(--cyan-dim);
-  border-radius: 5px;
-  box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.6),
-    0 0 12px rgba(53, 230, 255, 0.15);
+  border: 1px solid var(--cyan);
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
 }
@@ -1318,10 +1595,10 @@ canvas.graph {
   font-family: var(--font-ui);
   font-size: 12px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .ctx-item:hover:not(:disabled) {
-  background: var(--cyan-faint);
+  background: var(--cyan-wash);
   color: var(--cyan);
 }
 .ctx-item:disabled {
@@ -1335,8 +1612,8 @@ canvas.graph {
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: rgba(2, 6, 10, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(2, 6, 10, 0.72);
+  backdrop-filter: none;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1346,11 +1623,9 @@ canvas.graph {
 .cmd-palette {
   width: min(620px, 92vw);
   background: var(--bg-panel-solid);
-  border: 1px solid var(--cyan-dim);
-  border-radius: 8px;
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.6),
-    0 0 22px rgba(53, 230, 255, 0.15);
+  border: 1px solid var(--cyan);
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
 }
 .cmd-input {
@@ -1375,11 +1650,11 @@ canvas.graph {
   justify-content: space-between;
   gap: 12px;
   padding: 9px 12px;
-  border-radius: 5px;
+  border-radius: 0;
   cursor: pointer;
 }
 .cmd-item.sel {
-  background: var(--cyan-faint);
+  background: var(--cyan-wash);
 }
 .cmd-item.sel .cmd-title {
   color: var(--cyan);
@@ -1542,14 +1817,14 @@ canvas.graph {
   height: 3px;
   margin-top: 1.6rem;
   background: var(--cyan-faint);
-  border-radius: 2px;
+  border-radius: 0;
   overflow: hidden;
 }
 .boot-progress > span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
-  box-shadow: var(--glow);
+  background: var(--cyan);
+  box-shadow: none;
   transition: width 0.25s ease-out;
 }
 .boot-hint {
@@ -1570,7 +1845,7 @@ canvas.graph {
 .theme-swatch {
   height: 42px;
   border: 1px solid;
-  border-radius: 5px;
+  border-radius: 0;
   cursor: pointer;
   padding: 0 4px;
   display: flex;
@@ -1597,9 +1872,8 @@ canvas.graph {
 .theme-swatch.active {
   opacity: 1;
   box-shadow:
-    0 0 0 2px var(--bg),
-    0 0 0 4px var(--cyan),
-    var(--glow);
+    0 0 0 1px var(--bg),
+    0 0 0 2px var(--cyan);
 }
 
 /* ---- motion (gated by .motion-on / data-motion) ---- */
@@ -1609,14 +1883,12 @@ canvas.graph {
 @keyframes brand-breathe {
   0%,
   100% {
-    text-shadow: var(--glow);
-    filter: brightness(1);
+    text-shadow: none;
+    opacity: 1;
   }
   50% {
-    text-shadow:
-      0 0 12px var(--cyan),
-      0 0 22px var(--cyan);
-    filter: brightness(1.15);
+    text-shadow: none;
+    opacity: 0.82;
   }
 }
 
@@ -1635,8 +1907,7 @@ canvas.graph {
   }
 }
 
-.app.motion-on .line-bar.is-warn,
-.app.motion-on .bar.warn {
+.app.motion-on .line-bar.is-warn {
   animation: alert-flash 1.6s ease-in-out infinite;
 }
 .app.motion-on .proc-row.danger {
@@ -1705,7 +1976,6 @@ canvas.graph {
   .app.motion-on .brand,
   .app.motion-on .lay-item .panel,
   .app.motion-on .center .pane,
-  .app.motion-on .bar.warn,
   .app.motion-on .proc-row.danger,
   .app.motion-on .cmd-backdrop,
   .app.motion-on .cmd-palette,
@@ -1722,14 +1992,10 @@ canvas.graph {
 
 @media (max-width: 900px) {
   .mobile-only {
-    display: inline-flex;
+    display: inline-flex !important;
   }
-  .desk-only,
-  .desk-stat {
+  .desk-only {
     display: none !important;
-  }
-  .mobile-stat {
-    display: flex;
   }
   .badge-full {
     display: none;
@@ -1925,11 +2191,287 @@ canvas.graph {
     letter-spacing: 1px;
     font-size: 12px;
   }
-  .topbar .mobile-stat {
-    font-size: 11px;
-  }
   .kb-key {
     min-height: 32px;
     font-size: 11px;
   }
+}
+
+/* ---- layout mode picker ---- */
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.mode-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 9px;
+  padding: 8px 9px;
+  text-align: left;
+  font: inherit;
+  color: var(--text-dim);
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--cyan-dim);
+  cursor: pointer;
+}
+.mode-card:hover {
+  border-color: var(--cyan);
+}
+.mode-card.is-on {
+  border-color: var(--cyan);
+  background: var(--cyan-wash);
+}
+.mode-card b {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.mode-card.is-on b {
+  color: var(--cyan);
+}
+.mode-hint {
+  grid-column: 2;
+  font-size: 9px;
+  line-height: 1.35;
+}
+/* A schematic of the actual topology, so the label is not the only cue. */
+.mode-figure {
+  grid-row: 1 / span 2;
+  position: relative;
+  width: 30px;
+  height: 22px;
+  border: 1px solid var(--cyan-faint);
+}
+.mode-figure > i {
+  position: absolute;
+  background: var(--cyan-dim);
+}
+.mode-card.is-on .mode-figure > i {
+  background: var(--cyan);
+}
+.fig-panels > i {
+  top: 2px;
+  bottom: 2px;
+}
+.fig-panels > i:nth-child(1) {
+  left: 2px;
+  width: 5px;
+}
+.fig-panels > i:nth-child(2) {
+  left: 9px;
+  right: 9px;
+}
+.fig-panels > i:nth-child(3) {
+  right: 2px;
+  width: 5px;
+}
+.fig-focus > i {
+  top: 2px;
+  bottom: 2px;
+}
+.fig-focus > i:nth-child(1) {
+  left: 6px;
+  right: 6px;
+}
+.fig-focus > i:nth-child(2) {
+  left: 2px;
+  width: 2px;
+  opacity: 0.45;
+}
+.fig-focus > i:nth-child(3) {
+  right: 2px;
+  width: 2px;
+  opacity: 0.45;
+}
+.fig-rack > i {
+  left: 2px;
+  right: 2px;
+}
+.fig-rack > i:nth-child(1) {
+  top: 2px;
+  height: 4px;
+}
+.fig-rack > i:nth-child(2) {
+  top: 8px;
+  height: 6px;
+}
+.fig-rack > i:nth-child(3) {
+  bottom: 2px;
+  height: 4px;
+}
+/* Plane has no frames, so its figure is rules only. */
+.fig-plane > i {
+  left: 2px;
+  right: 2px;
+  height: 1px;
+}
+.fig-plane > i:nth-child(1) {
+  top: 4px;
+}
+.fig-plane > i:nth-child(2) {
+  top: 10px;
+  right: 12px;
+}
+.fig-plane > i:nth-child(3) {
+  top: 16px;
+}
+
+/* ==========================================================================
+   Layout modes
+
+   The module tree is identical in all four modes; each block below only
+   re-composes the same slots, so drag, resize, hide and the module tools keep
+   working everywhere. `panels` is the unstyled baseline above.
+   ========================================================================== */
+
+/* Content must sit above the globe once Focus demotes it to a backdrop. */
+.app[data-layout='focus'] .lay-sidebar,
+.app[data-layout='focus'] .center {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Focus: the terminal leads, readouts step back to bare figures ---- */
+.app[data-layout='focus'] .lay-sidebar {
+  width: 264px !important;
+}
+/* Air around the terminal is the point of this mode. */
+.app[data-layout='focus'] .center {
+  padding: 0 28px;
+}
+.app[data-layout='focus'] .lay-item[data-mod='globe'] + .lay-item {
+  margin-top: 0;
+}
+.app[data-layout='focus'] .lay-splitter {
+  display: none;
+}
+.app[data-layout='focus'] .lay-col {
+  gap: 22px;
+  padding: 16px 14px;
+}
+.app[data-layout='focus'] .panel:not(.globe-panel) {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.app[data-layout='focus'] .panel-title {
+  border-bottom-color: transparent;
+  padding-bottom: 2px;
+}
+.app[data-layout='focus'] .mod-bar {
+  opacity: 0;
+}
+.app[data-layout='focus'] .mod-frame:hover .mod-bar {
+  opacity: 1;
+}
+
+/* Globe leaves the column and becomes a backdrop for the whole workspace. */
+.app[data-layout='focus'] .lay-item[data-mod='globe'] {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.3;
+  pointer-events: none;
+}
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .mod-frame,
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .globe-panel {
+  height: 100% !important;
+  border: 0;
+  background: transparent;
+}
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .globe-hud,
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .globe-label,
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .globe-detail,
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .mod-bar,
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .mod-resize,
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .lay-grip,
+.app[data-layout='focus'] .lay-item[data-mod='globe'] .lay-hide {
+  display: none;
+}
+
+/* ---- Rack: full-width instrument bays stacked down the screen ---- */
+.app[data-layout='rack'] .body {
+  flex-direction: column;
+}
+.app[data-layout='rack'] .lay-sidebar {
+  width: auto !important;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+.app[data-layout='rack'] .lay-splitter {
+  display: none;
+}
+.app[data-layout='rack'] .lay-sidebar.left > .lay-col {
+  direction: ltr;
+}
+.app[data-layout='rack'] .lay-col {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  overflow-y: visible;
+  gap: 1px;
+  padding: 1px;
+}
+.app[data-layout='rack'] .lay-item {
+  flex: 1 1 300px;
+  min-width: 264px;
+}
+/* One bay height for the whole rack, overriding per-module heights. */
+.app[data-layout='rack'] .lay-item .mod-frame {
+  height: 188px !important;
+}
+/* A fixed bay can be shorter than its content, so the bay itself scrolls
+   instead of clipping a row in half. */
+.app[data-layout='rack'] .lay-item .panel {
+  height: 100%;
+  overflow-y: auto;
+}
+.app[data-layout='rack'] .lay-item .list {
+  max-height: none;
+}
+.app[data-layout='rack'] .center {
+  flex: 1 1 auto;
+  min-height: 220px;
+}
+.app[data-layout='rack'] .mod-resize {
+  display: none;
+}
+
+/* ---- Plane: no frames at all, structure from alignment and hairlines ---- */
+.app[data-layout='plane'] .panel:not(.globe-panel) {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+/* Density is the point of this mode, so gaps stay tight and the title hairlines
+   do the separating. */
+.app[data-layout='plane'] .lay-col {
+  gap: 14px;
+  padding: 10px 12px;
+}
+/* Nothing else is framed here, so the globe drops its outline too. */
+.app[data-layout='plane'] .globe-panel {
+  border-color: transparent;
+}
+.app[data-layout='plane'] .lay-splitter::before {
+  background: var(--grid-line);
+}
+.app[data-layout='plane'] .mod-bar {
+  opacity: 0;
+}
+.app[data-layout='plane'] .mod-frame:hover .mod-bar {
+  opacity: 1;
+}
+.app[data-layout='plane'] .pane {
+  border: 0;
+}
+/* With no chrome competing, the readings can carry more weight. */
+.app[data-layout='plane'] .metric-row.is-lead b {
+  font-size: 18px;
+}
+.app[data-layout='plane'] .panel-title {
+  border-bottom-color: var(--grid-line);
 }

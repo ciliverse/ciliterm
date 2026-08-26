@@ -35,12 +35,18 @@ export function CpuCard({ metrics, hist }: CardProps) {
         <span>CPU</span>
         <span className="sub">{cpu.cores} cores</span>
       </div>
-      <div className="metric-row">
-        <span>{cpu.model || 'processor'}</span>
-        <b>{cpu.load.toFixed(1)}%</b>
+      <div className="panel-note" title={cpu.model || 'processor'}>
+        {cpu.model || 'processor'}
+      </div>
+      <div className="metric-row is-lead">
+        <span>load</span>
+        <b>
+          {cpu.load.toFixed(1)}
+          <span className="u">%</span>
+        </b>
       </div>
       <LineBar value={cpu.load} warn={cpu.load > 85} />
-      <Sparkline data={hist.cpu} color={colors.primary} />
+      <Sparkline data={hist.cpu} color={colors.primary} window={hist.window} />
     </div>
   );
 }
@@ -55,14 +61,17 @@ export function MemoryCard({ metrics, hist }: CardProps) {
         <span>Memory</span>
         <span className="sub">{bytes(mem.total)}</span>
       </div>
-      <div className="metric-row">
+      <div className="metric-row is-lead">
         <span>
           {bytes(mem.used)} / {bytes(mem.total)}
         </span>
-        <b>{mem.usedPct.toFixed(1)}%</b>
+        <b>
+          {mem.usedPct.toFixed(1)}
+          <span className="u">%</span>
+        </b>
       </div>
       <LineBar value={mem.usedPct} warn={mem.usedPct > 85} />
-      <Sparkline data={hist.mem} color={colors.green} />
+      <Sparkline data={hist.mem} color={colors.primary} window={hist.window} />
       {mem.swapUsedPct !== null && (
         <div className="metric-row" style={{ marginTop: 4 }}>
           <span>swap</span>
@@ -81,18 +90,24 @@ export function NetworkCard({ metrics, hist }: CardProps) {
     <div className="panel">
       <div className="panel-title">
         <span>Network</span>
-        <span className="sub">{net.iface}</span>
+        {/* The plot autoscales, so its ceiling is the one thing worth stating. */}
+        <span className="sub">0-{rate(hist.netScale)}</span>
       </div>
-      <div className="metric-row">
-        <span style={{ color: colors.primary }}>↓ {rate(net.rxBytesPerSec)}</span>
-        <span style={{ color: colors.secondary }}>↑ {rate(net.txBytesPerSec)}</span>
+      <div className="panel-note">{net.iface}</div>
+      <div className="metric-row is-lead is-split">
+        <span>
+          <span className="leg" /> rx {rate(net.rxBytesPerSec)}
+        </span>
+        <span>
+          <span className="leg is-dashed" /> tx {rate(net.txBytesPerSec)}
+        </span>
       </div>
       <Sparkline
         data={hist.rx}
         data2={hist.tx}
         color={colors.primary}
-        color2={colors.secondary}
-        height={64}
+        height={78}
+        window={hist.window}
       />
     </div>
   );

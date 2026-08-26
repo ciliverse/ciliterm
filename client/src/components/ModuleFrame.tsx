@@ -69,6 +69,7 @@ export function ModuleFrame({
       className={`mod-frame${full ? ' is-full' : ''}${fill ? ' is-fill' : ''}${!full && height != null ? ' is-sized' : ''}`}
       style={full || (fill && height == null) ? undefined : height != null ? { height } : undefined}
     >
+      <div className="mod-body">{children}</div>
       <div className="mod-bar">
         <div
           className="mod-grip"
@@ -79,8 +80,6 @@ export function ModuleFrame({
         >
           ⠿
         </div>
-        <span className="mod-bar-name">{moduleLabel(id)}</span>
-        <span className="mod-bar-spacer" />
         {onHide && (
           <button type="button" className="mod-tool is-hide" title={`hide ${moduleLabel(id)}`} onClick={onHide}>
             ✕
@@ -95,7 +94,6 @@ export function ModuleFrame({
           {full ? 'EXIT' : 'FULL'}
         </button>
       </div>
-      <div className="mod-body">{children}</div>
       {!full && (
         <div className="mod-resize" onPointerDown={onResizeStart} title="drag to resize" />
       )}

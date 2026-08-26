@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { DEFAULT_THEME_ID, type Theme } from '../theme/themes';
-import { DEFAULT_LAYOUT, normalizeLayout, type Layout } from '../layout/layout';
+import {
+  DEFAULT_LAYOUT,
+  normalizeLayout,
+  type Layout,
+  type LayoutMode,
+} from '../layout/layout';
 
 export interface Settings {
   fontFamily: string;
@@ -9,6 +14,8 @@ export interface Settings {
   sysIntervalMs: number;
   includeProcesses: boolean;
   lowPowerGlobe: boolean;
+  /** Globe canvas pixel ratio cap (1–2). Does not exceed the display DPR. */
+  globeResolution: number;
   /** Send pasted text raw (no bracketed-paste markers). Fixes `^[[200~` leaks on shells that don't support it. */
   rawPaste: boolean;
   themeId: string;
@@ -16,6 +23,8 @@ export interface Settings {
   customThemes: Theme[];
   /** Arrangement of movable modules across the left/right columns. */
   layout: Layout;
+  /** Spatial topology the slots are composed into. */
+  layoutMode: LayoutMode;
   /** Named layout presets the user can switch between. */
   layoutPresets: { name: string; layout: Layout }[];
   /** Show the animated boot sequence on load. */
@@ -33,10 +42,12 @@ const DEFAULTS: Settings = {
   sysIntervalMs: 1000,
   includeProcesses: true,
   lowPowerGlobe: false,
+  globeResolution: 2,
   rawPaste: false,
   themeId: DEFAULT_THEME_ID,
   customThemes: [],
   layout: DEFAULT_LAYOUT,
+  layoutMode: 'panels',
   layoutPresets: [],
   bootScreen: true,
   crtIntensity: 55,
@@ -53,6 +64,8 @@ function load(): Settings {
       const merged = { ...DEFAULTS, ...parsed };
       // Ensure the layout is well-formed even across upgrades.
       merged.layout = normalizeLayout(parsed.layout);
+      const res = Number(parsed.globeResolution);
+      merged.globeResolution = Number.isFinite(res) ? Math.min(2, Math.max(1, res)) : 2;
       return merged;
     }
   } catch {

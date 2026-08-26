@@ -17,6 +17,12 @@ export interface ProjectedPin {
 
 const DEG2RAD = Math.PI / 180;
 const DEFAULT_DAY = 28000;
+const GLOBE_RADIUS = 500;
+const CAMERA_FOV = 50;
+/** How much of the tighter viewport axis the sphere itself should fill. */
+const FIT_FILL = 0.7;
+const MIN_ZOOM = 0.55;
+const MAX_ZOOM = 2.1;
 
 function hexToRgb01(hex: string): { r: number; g: number; b: number } {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -35,6 +41,9 @@ export class EncomGlobe {
   private frame = 0;
   private running = false;
   private lowPower = false;
+  private pixelRatioCap = 2;
+  /** Backdrop instances stay texture: no city pins, peer markers or satellites. */
+  private backdrop = false;
   private lastFrameTime = 0;
   private oriented = false;
   private holdUntil = 0;
@@ -51,14 +60,24 @@ export class EncomGlobe {
   private pinByKey = new Map<string, { remove(): void }>();
   private markerSig = '';
   private satellitesReady = false;
+  /** 1 = fitted to the panel; wheel zooms around that. */
+  private zoomFactor = 1;
   private cPrimary = '#35e6ff';
   private cSecondary = '#ffae00';
   private cRed = '#ff4d5e';
   private cBg = '#04070a';
 
-  constructor(container: HTMLElement, lowPower = false) {
+  constructor(
+    container: HTMLElement,
+    opts: { lowPower?: boolean; pixelRatio?: number; backdrop?: boolean } = {},
+  ) {
     this.container = container;
-    this.lowPower = lowPower;
+    this.lowPower = !!opts.lowPower;
+    this.pixelRatioCap = opts.pixelRatio ?? 2;
+    // As a backdrop the globe is texture, not a map: labels at full-viewport
+    // scale would read as the foreground and bury the terminal.
+    const backdrop = !!opts.backdrop;
+    this.backdrop = backdrop;
     this.readColors();
 
     const w = container.clientWidth || 300;
@@ -74,22 +93,25 @@ export class EncomGlobe {
       introLinesColor: this.cPrimary,
       introLinesDuration: 2000,
       introLinesCount: 60,
-      scale: 1.4,
+      scale: 1,
       dayLength: DEFAULT_DAY,
       viewAngle: 0.1,
       maxPins: 500,
       maxMarkers: 16,
-      pinsData: [...pinLocations, ...EXTRA_CITIES]
-        .filter((p) => p.label.trim().length > 0)
-        .map((p) => ({ ...p })),
+      pinsData: backdrop
+        ? []
+        : [...pinLocations, ...EXTRA_CITIES]
+            .filter((p) => p.label.trim().length > 0)
+            .map((p) => ({ ...p })),
     });
-    this.core.renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1 : 2));
+    this.applyPixelRatio();
     this.paintFog();
     container.appendChild(this.core.domElement);
     this.core.init(() => {
       this.paintFog();
       this.seedSatellites();
     });
+    this.applyDistance();
 
     const dom = this.core.domElement;
     dom.style.touchAction = 'none';
@@ -100,6 +122,7 @@ export class EncomGlobe {
 
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(container);
+    requestAnimationFrame(() => this.resize());
   }
 
   setSelectHandler(fn: (p: GeoPoint | null) => void): void {
@@ -160,7 +183,18 @@ export class EncomGlobe {
 
   setLowPower(low: boolean): void {
     this.lowPower = low;
-    this.core.renderer.setPixelRatio(Math.min(window.devicePixelRatio, low ? 1 : 2));
+  }
+
+  setPixelRatio(cap: number): void {
+    this.pixelRatioCap = Math.min(2, Math.max(1, cap));
+    this.applyPixelRatio();
+  }
+
+  private applyPixelRatio(): void {
+    this.core.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.pixelRatioCap));
+    const w = this.container.clientWidth;
+    const h = this.container.clientHeight;
+    if (w > 0 && h > 0) this.core.renderer.setSize(w, h);
   }
 
   dispose(): void {
@@ -214,14 +248,35 @@ export class EncomGlobe {
   };
 
   private zoomBy(deltaY: number): void {
-    const next = THREE.MathUtils.clamp(this.core.cameraDistance + deltaY * 0.9, 480, 2600);
+    this.zoomFactor = THREE.MathUtils.clamp(
+      this.zoomFactor * Math.exp(deltaY * 0.0012),
+      MIN_ZOOM,
+      MAX_ZOOM,
+    );
+    this.applyDistance();
+  }
+
+  private fittedDistance(w: number, h: number): number {
+    const halfV = (CAMERA_FOV / 2) * DEG2RAD;
+    const halfH = Math.atan(Math.tan(halfV) * (w / Math.max(h, 1)));
+    const distV = GLOBE_RADIUS / (FIT_FILL * Math.tan(halfV));
+    const distH = GLOBE_RADIUS / (FIT_FILL * Math.tan(halfH));
+    return Math.max(distV, distH);
+  }
+
+  private applyDistance(): void {
+    const w = this.container.clientWidth || 300;
+    const h = this.container.clientHeight || 300;
+    const next = this.fittedDistance(w, h) * this.zoomFactor;
     this.core.cameraDistance = next;
-    if (this.core.scene.fog) {
+    if (this.core.scene?.fog) {
       this.core.scene.fog.near = next;
       this.core.scene.fog.far = next + 300;
     }
-    this.core.camera.far = next + 300;
-    this.core.camera.updateProjectionMatrix();
+    if (this.core.camera) {
+      this.core.camera.far = next + 300;
+      this.core.camera.updateProjectionMatrix();
+    }
   }
 
   private readColors(): void {
@@ -252,6 +307,7 @@ export class EncomGlobe {
   }
 
   private syncPins(): void {
+    if (this.backdrop) return;
     const want = new Map<string, GeoPoint>();
     for (const p of this.allPoints()) want.set(geoPointKey(p), p);
 
@@ -272,6 +328,7 @@ export class EncomGlobe {
   }
 
   private syncMarkers(): void {
+    if (this.backdrop) return;
     const self = this.geo.self;
     const ends = rankHudRows(this.geo.points).slice(0, 8);
     const sig = [
@@ -292,7 +349,7 @@ export class EncomGlobe {
   }
 
   private seedSatellites(): void {
-    if (this.satellitesReady) return;
+    if (this.backdrop || this.satellitesReady) return;
     this.satellitesReady = true;
     const sats: Array<{ lat: number; lon: number; altitude: number }> = [];
     for (let i = 0; i < 2; i++) {
@@ -386,8 +443,10 @@ export class EncomGlobe {
     if (w === 0 || h === 0) return;
     this.core.width = w;
     this.core.height = h;
-    this.core.camera.aspect = w / h;
-    this.core.camera.updateProjectionMatrix();
+    if (this.core.camera) {
+      this.core.camera.aspect = w / h;
+    }
+    this.applyDistance();
     this.core.renderer.setSize(w, h);
   }
 

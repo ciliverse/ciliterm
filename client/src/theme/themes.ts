@@ -202,16 +202,16 @@ export function applyTheme(theme: Theme): void {
   set('--bg-panel-solid', c.bgPanelSolid);
   set('--cyan', c.primary);
   set('--cyan-dim', c.primaryDim);
-  set('--cyan-faint', hexToRgba(c.primary, 0.14));
+  set('--cyan-faint', hexToRgba(c.primary, 0.32));
+  set('--cyan-wash', hexToRgba(c.primary, 0.09));
   set('--orange', c.secondary);
   set('--red', c.red);
   set('--green', c.green);
   set('--text', c.text);
   set('--text-dim', c.textDim);
-  set('--grid-line', hexToRgba(c.primary, 0.08));
-  set('--glow', `0 0 8px ${hexToRgba(c.primary, 0.35)}`);
-  // Soft ambient wash used by the app backdrop (follows primary).
-  set('--ambient', hexToRgba(c.primary, 0.07));
+  set('--grid-line', hexToRgba(c.primary, 0.1));
+  set('--glow', 'none');
+  set('--ambient', hexToRgba(c.primary, 0.04));
 }
 
 /**
@@ -228,10 +228,8 @@ export function applyCrtIntensity(level: number): void {
 
   // Rebuild grid / glow strength from the active primary so intensity actually moves.
   const primary = getComputedStyle(root).getPropertyValue('--cyan').trim() || '#35e6ff';
-  const gridA = 0.02 + t * 0.12;
-  const glowA = 0.12 + t * 0.45;
+  const gridA = 0.04 + t * 0.1;
   root.style.setProperty('--grid-line', hexToRgba(primary, gridA));
-  root.style.setProperty('--glow', `0 0 ${6 + t * 10}px ${hexToRgba(primary, glowA)}`);
 }
 
 /** Derive an xterm.js theme from the semantic palette. Background stays transparent. */

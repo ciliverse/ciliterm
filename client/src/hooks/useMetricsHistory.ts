@@ -8,7 +8,13 @@ export interface MetricsHistory {
   mem: number[];
   rx: number[];
   tx: number[];
+  /** Bytes/sec mapping to the top of the network plot, so it can label its own axis. */
+  netScale: number;
+  /** Samples the plots hold, i.e. the width of the time axis in samples. */
+  window: number;
 }
+
+export const HISTORY_SAMPLES = HISTORY;
 
 function push(arr: number[], v: number): number[] {
   const next = arr.length >= HISTORY ? arr.slice(1) : arr.slice();
@@ -27,7 +33,14 @@ function seedSeries(center: number, n = 24): number[] {
 
 /** Rolling normalized time-series for the sparkline cards. */
 export function useMetricsHistory(metrics: Metrics | null): MetricsHistory {
-  const [hist, setHist] = useState<MetricsHistory>({ cpu: [], mem: [], rx: [], tx: [] });
+  const [hist, setHist] = useState<MetricsHistory>({
+    cpu: [],
+    mem: [],
+    rx: [],
+    tx: [],
+    netScale: 1024 * 1.2,
+    window: HISTORY,
+  });
   const netMax = useRef(1);
   const seeded = useRef(false);
 
@@ -51,17 +64,21 @@ export function useMetricsHistory(metrics: Metrics | null): MetricsHistory {
       if (!seeded.current && h.cpu.length === 0) {
         seeded.current = true;
         return {
+          ...h,
           cpu: seedSeries(cpuN),
           mem: seedSeries(memN),
           rx: seedSeries(Math.max(0.15, rxN)),
           tx: seedSeries(Math.max(0.1, txN)),
+          netScale,
         };
       }
       return {
+        ...h,
         cpu: push(h.cpu, cpuN),
         mem: push(h.mem, memN),
         rx: push(h.rx, rxN),
         tx: push(h.tx, txN),
+        netScale,
       };
     });
   }, [metrics]);

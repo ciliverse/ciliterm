@@ -8,6 +8,7 @@ import {
   moduleLabel,
   moveModule,
   openCenterTerminal,
+  LAYOUT_MODES,
   type Layout,
   type ModuleId,
   type SlotId,
@@ -252,6 +253,27 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             add theme
           </button>
         </div>
+        <div className="field">
+          <label>Layout mode</label>
+          <div className="mode-grid">
+            {LAYOUT_MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`mode-card${settings.layoutMode === m.id ? ' is-on' : ''}`}
+                onClick={() => update({ layoutMode: m.id })}
+              >
+                <span className={`mode-figure fig-${m.id}`} aria-hidden>
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <b>{m.label}</b>
+                <span className="mode-hint">{m.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
         <LayoutEditor layout={settings.layout} onChange={(layout) => update({ layout })} />
         <div className="field">
           <label>Layout presets</label>
@@ -327,6 +349,17 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             />{' '}
             Poll process list (heavier)
           </label>
+        </div>
+        <div className="field">
+          <label>Globe resolution: {settings.globeResolution}×</label>
+          <input
+            type="range"
+            min={1}
+            max={2}
+            step={0.25}
+            value={settings.globeResolution}
+            onChange={(e) => update({ globeResolution: Number(e.target.value) })}
+          />
         </div>
         <div className="field">
           <label>

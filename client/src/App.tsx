@@ -234,7 +234,7 @@ export function App() {
             <Suspense
               fallback={<div className="panel globe-panel globe-loading">loading globe…</div>}
             >
-              <Globe lowPower={settings.lowPowerGlobe} />
+              <Globe />
             </Suspense>
           </PanelErrorBoundary>
         );
@@ -287,7 +287,7 @@ export function App() {
   };
 
   return (
-    <div className={`app${settings.motion ? ' motion-on' : ''}`}>
+    <div className={`app${settings.motion ? ' motion-on' : ''}`} data-layout={settings.layoutMode}>
       <header className="topbar">
         <button
           className={`toggle-btn mobile-only ${leftOpen ? 'active' : ''}`}
@@ -321,17 +321,23 @@ export function App() {
         )}
         {metrics && (
           <>
-            <div className="stat desk-stat">
-              CPU <b>{metrics.cpu.load.toFixed(0)}%</b>
-            </div>
-            <div className="stat desk-stat">
-              MEM <b>{metrics.mem.usedPct.toFixed(0)}%</b>
-            </div>
-            <div className="stat desk-stat">
-              NET <b>{rate(metrics.net.rxBytesPerSec + metrics.net.txBytesPerSec)}</b>
-            </div>
-            <div className="stat mobile-stat">
+            <div className={`stat desk-stat${metrics.cpu.load > 85 ? ' is-warn' : ''}`}>
+              <span className="k">CPU</span>
               <b>{metrics.cpu.load.toFixed(0)}%</b>
+              <span className="micro" aria-hidden>
+                <i style={{ width: `${Math.min(100, metrics.cpu.load)}%` }} />
+              </span>
+            </div>
+            <div className={`stat desk-stat${metrics.mem.usedPct > 85 ? ' is-warn' : ''}`}>
+              <span className="k">MEM</span>
+              <b>{metrics.mem.usedPct.toFixed(0)}%</b>
+              <span className="micro" aria-hidden>
+                <i style={{ width: `${Math.min(100, metrics.mem.usedPct)}%` }} />
+              </span>
+            </div>
+            <div className="stat desk-stat">
+              <span className="k">NET</span>
+              <b>{rate(metrics.net.rxBytesPerSec + metrics.net.txBytesPerSec)}</b>
             </div>
           </>
         )}
@@ -353,7 +359,7 @@ export function App() {
             onClick={() => setShowPalette(true)}
             title="Command palette (Ctrl+Shift+P)"
           >
-            ⌘
+            CMD
           </button>
           <button
             className={`toggle-btn ${settings.showKeyboard ? 'active' : ''}`}

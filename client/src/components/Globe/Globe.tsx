@@ -19,7 +19,7 @@ function shortLabel(p: GeoPoint): string {
   return p.label.split(' · ')[0] ?? p.label;
 }
 
-export function Globe({ lowPower }: { lowPower: boolean }) {
+export function Globe() {
   const { settings } = useSettings();
   const { tabs, setActiveTab, connectHost } = useTabs();
   const holderRef = useRef<HTMLDivElement>(null);
@@ -27,6 +27,8 @@ export function Globe({ lowPower }: { lowPower: boolean }) {
   const [selected, setSelected] = useState<GeoPoint | null>(null);
   const [geo, setGeo] = useState<GeoData>({ self: null, points: [], arcs: [] });
   const showcase = isShowcase();
+  /** Focus mode drops the globe behind the workspace, so it renders as texture. */
+  const backdrop = settings.layoutMode === 'focus';
 
   const openHostIds = tabs.flatMap((tab) =>
     tab.panes.map((p) => p.create?.hostId).filter((id): id is string => !!id),
@@ -34,7 +36,11 @@ export function Globe({ lowPower }: { lowPower: boolean }) {
 
   useEffect(() => {
     if (!holderRef.current) return;
-    const globe = new EncomGlobe(holderRef.current, lowPower);
+    const globe = new EncomGlobe(holderRef.current, {
+      lowPower: settings.lowPowerGlobe,
+      pixelRatio: settings.globeResolution,
+      backdrop: backdrop,
+    });
     globeRef.current = globe;
     globe.setSelectHandler(setSelected);
     globe.start();
@@ -48,24 +54,37 @@ export function Globe({ lowPower }: { lowPower: boolean }) {
     });
     sys.send({ t: 'geo.request' });
 
-    const onVisibility = () => {
-      if (document.hidden) globe.stop();
-      else globe.start();
+    let onScreen = true;
+    const syncRun = () => {
+      if (onScreen && !document.hidden) globe.start();
+      else globe.stop();
     };
+    const onVisibility = () => syncRun();
     document.addEventListener('visibilitychange', onVisibility);
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        onScreen = !!entry?.isIntersecting;
+        syncRun();
+      },
+      { threshold: 0.05 },
+    );
+    io.observe(holderRef.current);
 
     return () => {
       offMsg();
+      io.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
       globe.dispose();
       globeRef.current = null;
     };
+    // Rebuilding on `backdrop` is intentional: label geometry is baked at init.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [backdrop]);
 
   useEffect(() => {
-    globeRef.current?.setLowPower(lowPower);
-  }, [lowPower]);
+    globeRef.current?.setLowPower(settings.lowPowerGlobe);
+    globeRef.current?.setPixelRatio(settings.globeResolution);
+  }, [settings.lowPowerGlobe, settings.globeResolution]);
 
   useEffect(() => {
     globeRef.current?.refreshColors();

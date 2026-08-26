@@ -36,6 +36,19 @@ export function moduleLabel(id: ModuleId): string {
 export type ColumnId = 'left' | 'right';
 export type SlotId = ColumnId | 'header' | 'center';
 
+/**
+ * How the slots are arranged on screen. The module tree is identical in every
+ * mode; only CSS re-composes it, so dragging, resizing and hiding keep working.
+ */
+export type LayoutMode = 'panels' | 'focus' | 'rack' | 'plane';
+
+export const LAYOUT_MODES: { id: LayoutMode; label: string; hint: string }[] = [
+  { id: 'panels', label: 'Panels', hint: 'Side columns around the terminal' },
+  { id: 'focus', label: 'Focus', hint: 'Terminal leads, globe drops behind it' },
+  { id: 'rack', label: 'Rack', hint: 'Full-width instrument bays, stacked' },
+  { id: 'plane', label: 'Plane', hint: 'No frames, maximum density' },
+];
+
 export interface Layout {
   left: ModuleId[];
   right: ModuleId[];
